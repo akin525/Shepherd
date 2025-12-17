@@ -542,6 +542,159 @@ class ClientController extends Controller
         ]);
     }
 
+    public function paymentindex(Request $request)
+    {
+        $user = $request->user();
+
+        // Filters
+        $search  = $request->string('q')->trim();
+        $type    = $request->string('type')->trim();      // 'Security', 'Operations', etc.
+        $status  = $request->string('status')->trim();    // 'pending', 'dispensed'/'paid' etc.
+        $from    = $request->date('from');                // YYYY-MM-DD
+        $to      = $request->date('to');                  // YYYY-MM-DD
+
+        $query = Payment::query()
+            ->where('user_id', $user->id);
+
+        if ($search->isNotEmpty()) {
+            $q = (string) $search;
+            $query->where(function ($sub) use ($q) {
+                $sub->where('reference', 'like', "%{$q}%")
+                    ->orWhere('transaction_id', 'like', "%{$q}%");
+            });
+        }
+
+        if ($type->isNotEmpty()) {
+            // type can be saved as 'service' or 'type'
+            $query->where(function ($sub) use ($type) {
+                $sub->where('type', $type)->orWhere('service', $type);
+            });
+        }
+
+        if ($status->isNotEmpty()) {
+            $normalized = strtolower($status);
+            if ($normalized === 'dispensed') {
+                // Map UI "Dispensed" to DB statuses
+                $query->whereIn('status', ['dispensed', 'paid', 'deployed', 'completed']);
+            } else {
+                $query->where('status', $normalized);
+            }
+        }
+
+        if ($from) {
+            $query->whereDate('created_at', '>=', $from);
+        }
+        if ($to) {
+            $query->whereDate('created_at', '<=', $to);
+        }
+
+        // Paginate and transform for the table
+        $payments = $query
+            ->latest('created_at')
+            ->paginate(15)
+            ->through(function ($p) {
+                // Normalize
+                $status = strtolower($p->status);
+                $status_label = $status;
+                $status_dot = 'orange';
+                if (in_array($status, ['dispensed', 'paid', 'deployed', 'completed'])) {
+                    $status_label = 'Dispensed';
+                    $status_dot = 'green';
+                } elseif ($status === 'pending') {
+                    $status_label = 'Pending';
+                    $status_dot = 'orange';
+                }
+
+                // Currency and amount formatting (e.g., NPR8,000)
+                $currency = $p->currency ?? 'NGN';
+                $amountStr = $this->formatMoney($p->amount, $currency);
+
+                // Use provided reference format like "RTHGR3566734"
+                $paymentId = $p->reference ?? ('PAY-' . $p->id);
+
+                return [
+                    'id'               => $p->id,
+                    'payment_id'       => $paymentId,
+                    'amount'           => $amountStr,
+                    'type'             => $p->type ?? $p->service ?? '—',
+                    'number_of_funds'  => (int) ($p->number_of_funds ?? $p->staff_count ?? 0),
+                    'status'           => $status_label,
+                    'status_dot'       => $status_dot,
+                    'date'             => Carbon::parse($p->payment_date ?? $p->created_at)->format('d, F Y'),
+//                    'invoice_url'      => route('payments.invoice', ['id' => $p->id]),
+                ];
+            });
+
+        // Header stats
+        $totalAmount = (clone $query)->sum('amount'); // sum with same filters
+        $completedAmount = (clone $query)
+            ->whereIn('status', ['dispensed', 'paid', 'deployed', 'completed'])
+            ->sum('amount');
+
+        $completionPercent = $totalAmount > 0
+            ? round(($completedAmount / max($totalAmount, 0.00001)) * 100)
+            : 0;
+
+        // Build payload for view
+        $data = [
+            'header' => [
+                'title'               => 'Payment History',
+                'total_amount'        => $this->formatMoney($totalAmount, $request->input('currency', 'NPR')),
+                'completion_percent'  => $completionPercent, // e.g., 30%
+                'active_tab'          => 'All Payments',
+            ],
+            'filters' => [
+                'q'      => $search->isNotEmpty() ? (string)$search : null,
+                'type'   => $type->isNotEmpty() ? (string)$type : null,
+                'status' => $status->isNotEmpty() ? (string)$status : null,
+                'from'   => $from?->format('Y-m-d'),
+                'to'     => $to?->format('Y-m-d'),
+            ],
+            'rows' => $payments, // paginator with transformed rows
+        ];
+
+      return response()->json([
+          'status'=>true,
+          'data'=>$data,
+          'message'=>'data retrieved successfully',
+      ]);
+    }
+
+    public function invoice(Request $request, int $id)
+    {
+        $user = $request->user();
+
+        $payment = Payment::where('id', $id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        // If you store invoice path
+        if ($payment->receipt_path && file_exists(storage_path('app/' . $payment->receipt_path))) {
+            return response()->download(storage_path('app/' . $payment->receipt_path));
+        }
+
+        // Otherwise, generate an invoice on the fly or show a page
+        // return view('payments.invoice-show', ['payment' => $payment]);
+
+        abort(404, 'Invoice not found.');
+    }
+
+    // Helpers
+
+    protected function formatMoney($amount, $currency = 'NGN')
+    {
+        if ($amount === null) {
+            return "{$currency}0";
+        }
+
+        // Format with thousands separator, no decimals if integer
+        $decimals = fmod((float)$amount, 1.0) == 0.0 ? 0 : 2;
+        $formatted = number_format((float)$amount, $decimals);
+
+        // Some UIs show currency before value without space (e.g., NPR8000)
+        return "{$currency}{$formatted}";
+    }
+
     /**
      * Format "Period" as "January - March" or "MMM, YYYY - MMM, YYYY".
      */

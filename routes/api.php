@@ -95,6 +95,8 @@ Route::middleware('auth:sanctum')->group(function () {
     //client
     Route::get('/client/dashboard', [ClientController::class, 'dashboard']);
     Route::get('/client/subscription', [ClientController::class, 'Subscriptionindex']);
+    Route::get('/client/payment', [ClientController::class, 'paymentindex']);
+    Route::get('/client/me', [ClientAuthController::class, 'me']);
 });
 
 // Admin routes (requires admin role)
