@@ -18,12 +18,6 @@ class TicketReply extends Model
         'created_by',
     ];
 
-    protected $casts = [
-        'is_internal' => 'boolean',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
-    ];
 
     /**
      * Get the ticket associated with the reply.

@@ -26,13 +26,7 @@ class Complaint extends Model
         'feedback_comments',
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
-        'resolved_at' => 'datetime',
-        'feedback_rating' => 'integer',
-    ];
+
 
     const STATUS_PENDING = 'pending';
     const STATUS_IN_PROGRESS = 'in_progress';

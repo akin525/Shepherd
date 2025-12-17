@@ -24,12 +24,6 @@ class ClientContact extends Model
 //        'updated_by',
 //    ];
 
-    protected $casts = [
-        'is_primary' => 'boolean',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
-    ];
 
     /**
      * Get the client associated with the contact.

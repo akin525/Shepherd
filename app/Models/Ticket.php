@@ -24,12 +24,6 @@ class Ticket extends Model
         'resolution',
     ];
 
-    protected $casts = [
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
-        'deleted_at' => 'datetime',
-        'resolved_at' => 'datetime',
-    ];
 
     const STATUS_OPEN = 'open';
     const STATUS_IN_PROGRESS = 'in_progress';
