@@ -383,7 +383,7 @@ class ClientController extends Controller
                     'number_of_staff' => (int) ($row->staff_count ?? $row->number_of_staffs ?? 0),
                     'equipments'      => (int) ($row->equipments ?? $row->equipment_count ?? 0),
                     'status'          => $status, // 'pending' | 'paid'
-                    'download_url'    => route('subscriptions.download', ['id' => $row->id]),
+//                    'download_url'    => route('subscriptions.download', ['id' => $row->id]),
                 ];
             });
 
