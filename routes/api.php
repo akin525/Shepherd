@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Client\ClientAuthController;
+use App\Http\Controllers\Client\ClientController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
@@ -29,6 +31,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
+Route::post('/client/login', [ClientAuthController::class, 'login']);
 Route::post('/auth/register', [AuthController::class, 'register']);
 
 // Protected routes
@@ -88,6 +91,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard
     Route::get('/dashboard', [EmployeeController::class, 'dashboard']);
     Route::get('/dashboard/stats', [EmployeeController::class, 'dashboardStats']);
+
+    //client
+    Route::get('/client/dashboard', [ClientController::class, 'dashboard']);
+    Route::get('/client/subscription', [ClientController::class, 'Subscriptionindex']);
 });
 
 // Admin routes (requires admin role)

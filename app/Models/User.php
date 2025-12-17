@@ -66,6 +66,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the client associated with the user.
+     */
+    public function client(): HasOne
+    {
+        return $this->hasOne(Client::class, 'user_id');
+    }
+
+    /**
      * Check if user is admin
      */
     public function isAdmin(): bool
@@ -90,6 +98,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if user is client
+     */
+    public function isClient(): bool
+    {
+        return $this->type === 'client';
+    }
+
+    /**
      * Get user role display name
      */
     public function getRoleDisplayName(): string
@@ -99,6 +115,7 @@ class User extends Authenticatable
             'company' => 'Company Admin',
             'hr' => 'HR Manager',
             'employee' => 'Employee',
+            'client' => 'Client',
             default => 'User',
         };
     }
