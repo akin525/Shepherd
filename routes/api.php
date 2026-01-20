@@ -31,7 +31,6 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 // Public routes
 Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/client/login', [ClientAuthController::class, 'login']);
 Route::post('/auth/register', [AuthController::class, 'register']);
 
 // Protected routes
@@ -92,11 +91,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard', [EmployeeController::class, 'dashboard']);
     Route::get('/dashboard/stats', [EmployeeController::class, 'dashboardStats']);
 
-    //client
-    Route::get('/client/dashboard', [ClientController::class, 'dashboard']);
-    Route::get('/client/subscription', [ClientController::class, 'Subscriptionindex']);
-    Route::get('/client/payment', [ClientController::class, 'paymentindex']);
-    Route::get('/client/me', [ClientAuthController::class, 'me']);
+
 });
 
 // Admin routes (requires admin role)
@@ -107,3 +102,5 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::get('/reports/attendance', [AttendanceController::class, 'attendanceReport']);
     Route::get('/reports/payroll', [PayrollController::class, 'payrollReport']);
 });
+
+require __DIR__ . '/client.php';

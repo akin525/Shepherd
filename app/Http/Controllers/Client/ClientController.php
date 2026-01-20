@@ -16,7 +16,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class ClientController extends Controller
@@ -679,6 +681,61 @@ class ClientController extends Controller
         abort(404, 'Invoice not found.');
     }
 
+    public function staff(Request $request)
+    {
+        $perPage = $request->input('per_page', 20);
+
+        $data = ClientStaff::with('employee')->orderBy('id', 'desc')->paginate($perPage);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Data retrieved successfully',
+            'data' => $data
+        ], 200);
+    }
+
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required',
+            'new_password' => 'required|string|min:6|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation errors',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'The provided current password is incorrect.'
+            ], 400);
+        }
+
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Password updated successfully'
+        ], 200);
+    }
+    public function accountInfo()
+    {
+        $user = auth()->user();
+        return response()->json([
+            'status' => true,
+            'message' => 'Data retrieved successfully',
+            'data' => $user
+        ]);
+    }
+
     // Helpers
 
     protected function formatMoney($amount, $currency = 'NGN')
@@ -733,5 +790,7 @@ class ClientController extends Controller
         }
         return $s ?? $e ?? 'N/A';
     }
+
+
 
 }
