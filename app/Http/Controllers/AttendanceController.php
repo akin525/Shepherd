@@ -67,9 +67,11 @@ class AttendanceController extends Controller
      */
     public function checkIn(Request $request): JsonResponse
     {
-
+        // 1. UPDATE VALIDATION
         $validator = Validator::make($request->all(), [
-            'status' => 'nullable|string|max:255',
+            'status'   => 'nullable|string|max:255',
+            'location' => 'nullable|string|max:255', // Validate location
+            'image'    => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120', // Validate image (max 5MB)
         ]);
 
         if ($validator->fails()) {
@@ -93,24 +95,21 @@ class AttendanceController extends Controller
             $today = Carbon::today();
             $now = Carbon::now();
 
-            // Shift start time (HH:MM:SS). Adjust via config/env as needed.
+            // Shift Logic
             $shiftStartStr = config('attendance.shift_start', '09:00:00');
             [$h, $m, $s] = array_map('intval', explode(':', $shiftStartStr));
             $shiftStart = (clone $now)->setTime($h, $m, $s);
 
-            // Compute late duration (time type) as HH:MM:SS
             $late = '00:00:00';
             if ($now->gt($shiftStart)) {
                 $diffSeconds = $shiftStart->diffInSeconds($now);
                 $late = gmdate('H:i:s', $diffSeconds);
             }
 
-            // Find today's attendance
             $attendance = AttendanceEmployee::where('employee_id', $employee->id)
                 ->whereDate('date', $today)
                 ->first();
 
-            // Because clock_in is NOT NULL in the schema, a not-checked-in record may still hold "00:00:00".
             $alreadyCheckedIn = $attendance && $attendance->clock_in !== '00:00:00';
 
             if ($alreadyCheckedIn) {
@@ -120,30 +119,44 @@ class AttendanceController extends Controller
                 ], 400);
             }
 
+            // 2. HANDLE IMAGE UPLOAD
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                // Stores in storage/app/public/attendance_images
+                // Ensure you run: php artisan storage:link
+                $imagePath = $request->file('image')->store('attendance_images', 'public');
+            }
+
+            // 3. CAPTURE LOCATION
+            $location = $request->input('location');
+
             $clockInTime = $now->format('H:i:s');
             $status = $request->input('status', 'Present');
 
             if ($attendance) {
-                // Update existing record (assume "00:00:00" means not checked in yet)
+                // Update existing record
                 $attendance->update([
-                    'clock_in'       => $clockInTime,
-                    'late'           => $late,
-                    'status'         => $status,
-                    // Keep clock_out/early_leaving/overtime/total_rest as they are (to be set at check-out/end-of-day)
+                    'clock_in' => $clockInTime,
+                    'late'     => $late,
+                    'status'   => $status,
+                    'image'    => $imagePath, // Save image path
+                    'location' => $location,  // Save location
                 ]);
             } else {
-                // Create a fresh record. Several TIME columns are NOT NULL, set to "00:00:00" by default.
+                // Create fresh record
                 $attendance = AttendanceEmployee::create([
-                    'employee_id'     => $employee->id,
-                    'date'            => $today->format('Y-m-d'),
-                    'status'          => $status,
-                    'clock_in'        => $clockInTime,
-                    'clock_out'       => '00:00:00',
-                    'late'            => $late,
-                    'early_leaving'   => '00:00:00',
-                    'overtime'        => '00:00:00',
-                    'total_rest'      => '00:00:00',
-                    'created_by'      => Auth::id(),
+                    'employee_id'   => $employee->id,
+                    'date'          => $today->format('Y-m-d'),
+                    'status'        => $status,
+                    'clock_in'      => $clockInTime,
+                    'clock_out'     => '00:00:00',
+                    'late'          => $late,
+                    'early_leaving' => '00:00:00',
+                    'overtime'      => '00:00:00',
+                    'total_rest'    => '00:00:00',
+                    'created_by'    => Auth::id(),
+                    'image'         => $imagePath, // Save image path
+                    'location'      => $location,  // Save location
                 ]);
             }
 
@@ -154,6 +167,7 @@ class AttendanceController extends Controller
                     'attendance' => $attendance->load('employee'),
                     'check_in_time' => $clockInTime,
                     'late' => $late,
+                    'image_url' => $imagePath ? asset('storage/' . $imagePath) : null, // Return full URL
                 ]
             ], 200);
 
