@@ -274,6 +274,11 @@ class Employee extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(EmployeeDocument::class, 'employee_id');
+
+
+    } public function deployments(): HasMany
+    {
+        return $this->hasMany(EmployeeDeployment::class, 'employee_id');
     }
 
     /**
@@ -336,7 +341,7 @@ class Employee extends Model
             $start = \Carbon\Carbon::parse($this->date_of_joining);
             $end = \Carbon\Carbon::now();
         }
-        
+
         return $start->diffInYears($end) . ' years, ' . $start->diffInMonths($end) % 12 . ' months';
     }
 }
