@@ -22,7 +22,7 @@ class TrainingController extends Controller
             ->get()
             ->map(function ($training) {
                 return [
-                    'date'  => $training->start_date->format('Y-m-d'),
+                    'date'  => $training->start_date,
                     'title' => $training->name,
                     'type'  => $training->type,
                 ];
