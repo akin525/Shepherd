@@ -470,7 +470,7 @@ class PerformanceController extends Controller
                 'title'       => $award->award_type,
                 'description' => $award->description,
                 'type'        => $award->award_type,        // e.g., 'weekly_guard', 'monthly_guard'
-                'date'        => $award->received_at->format('m/d/Y'), // 11/19/2025
+                'date'        => $award->received_at,
             ];
         });
     }
