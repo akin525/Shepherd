@@ -26,24 +26,80 @@ class ProfileController extends Controller
             ], 404);
         }
 
+
         $user->load([
-            'employee',
             'employee.department',
-            'employee.designation',
-            'employee.branch'
+            'employee.documents'
         ]);
+
+        $employee = $user->employee;
 
         return response()->json([
             'status' => true,
             'message' => 'Profile retrieved successfully',
             'data' => [
-                'user' => $user,
-                'employment_info' => $this->getEmploymentInfo($user->employee),
-                'quick_stats' => $this->getQuickStats($user->employee),
+                'staff_details' => $this->getStaffDetails($user, $employee),
+
+                // Card 2: Performance
+                'performance' => $this->getPerformanceStats($employee),
+
+                // Card 3: Documents
+                'documents' => $this->getDocuments($employee),
             ]
         ]);
     }
 
+    /**
+     * Format data for the "Staff Details" card
+     */
+    private function getStaffDetails($user, $employee)
+    {
+        return [
+            'name'          => $user->name,
+            'email'         => $user->email,
+            'phone'         => $employee->phone,
+            'dob'           => $employee->dob ? $employee->dob->format('d/m/Y') : null,
+            'address'       => $employee->address,
+            'employee_id'   => $employee->id,
+            'staff_type'    => $employee->staff_type,
+            'department'    => $employee->department->name ?? 'N/A',
+            'role'          => $employee->role,           // Lead
+            'date_joined'   => $employee->created_at ? $employee->created_at->format('d/m/Y') : null,
+            'status'        => $employee->is_active,         // Deployed
+            'payroll_type'  => $employee->payroll_type,   // 30 Day
+        ];
+    }
+
+    /**
+     * Format data for the "Performance" card
+     */
+    private function getPerformanceStats($employee)
+    {
+        // You might calculate these or fetch them from a related table
+        return [
+            'attendance'    => '50%',
+            'client_rating' => '30%',
+            'others'        => '20%',
+            'current_score' => '50%',
+            'chart_data'    => [50, 30, 20] // Helpful for the donut chart
+        ];
+    }
+
+    /**
+     * Format data for the "Documents" card
+     */
+    private function getDocuments($employee)
+    {
+        // Maps over the documents relationship to return specific UI fields
+        return $employee->documents->map(function ($doc) {
+            return [
+                'id'        => $doc->id,
+                'type'      => $doc->document_type, // For the icon logic on frontend
+                'added_at'  => $doc->created_at->format('M d, Y'), // Jan 02, 2025
+                'file_url'  => $doc->document_value, // For the click action
+            ];
+        });
+    }
     /**
      * Update the authenticated user's profile.
      */
