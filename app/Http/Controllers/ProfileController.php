@@ -489,4 +489,82 @@ class ProfileController extends Controller
             ], 500);
         }
     }
+
+
+
+    public function deployment(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        $employee = $user->employee;
+
+
+        $activeDeployment = $employee->deployments()
+            ->where('status', 1)
+            ->latest()
+            ->first();
+
+        $historyDeployments = $employee->deployments()
+            ->where('status', '!=', 1)
+            ->orderBy('created_at', 'desc')
+            ->take(10) // Limit history to recent ones
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Deployment details retrieved successfully',
+            'data' => [
+                'has_active_deployment' => (bool) $activeDeployment,
+                'current' => $activeDeployment ? $this->formatCurrentDeployment($activeDeployment) : null,
+                // The bottom list
+                'history' => $historyDeployments,
+            ]
+        ]);
+    }
+
+    /**
+     * Formats the Active Deployment data (Status, Schedule, Location)
+     */
+    private function formatCurrentDeployment($deployment)
+    {
+        return [
+            'details' => [
+                'status'        => 1,
+//                'company_name'  => $deployment->site_name,
+                'date_deployed' => $deployment->created_at->format('d/m/Y'),
+                'start_date'    => $deployment->updated_at->format('d/m/Y'),
+                'duration'      => $deployment->validity_period,
+            ],
+
+            'schedule' => [
+                'shift_name' => $deployment->shift_name ?? '12 Hours',
+                'clock_in'   => $deployment->resumption_time ? date('g:i A', strtotime($deployment->start_time)) : '8:00 AM',
+//                'clock_out'  => $deployment->end_time ? date('g:i A', strtotime($deployment->end_time)) : '4:00 PM',
+            ],
+
+        ];
+    }
+
+    /**
+     * Formats the Previous Deployments list
+     */
+    private function formatDeploymentHistory($deployments)
+    {
+        return $deployments->map(function ($deploy) {
+            return [
+                'id'            => $deploy->id,
+                'title'         => $deploy->title, // "Ikoyi Man Guard Deployment"
+                'time_logged'   => $deploy->created_at->format('g:i A'), // 8:49 AM
+                'started_date'  => $deploy->start_date->format('d/m/Y'), // 23/12/2024
+                'status'        => $deploy->status, // To show if it was completed/cancelled
+            ];
+        });
+    }
 }
