@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Client\ClientAuthController;
 use App\Http\Controllers\Client\ClientController;
+use App\Http\Controllers\TrainingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\AuthController;
@@ -52,6 +53,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     //award
     Route::get('/awards', [PerformanceController::class, 'awards']);
+
+    //training
+    Route::get('/training', [TrainingController::class, 'index']);
 
     // Employee Management
     Route::apiResource('employees', EmployeeController::class);
