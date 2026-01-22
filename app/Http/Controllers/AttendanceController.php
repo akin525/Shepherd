@@ -184,7 +184,6 @@ class AttendanceController extends Controller
      */
     public function checkOut(Request $request): JsonResponse
     {
-
         $validator = Validator::make($request->all(), [
             // No specific fields required for check-out based on your schema
         ]);
@@ -198,112 +197,111 @@ class AttendanceController extends Controller
         }
 
         try {
-            $employee =$request->user()->employee;
+            $employee = $request->user()->employee;
 
-        if (!$employee) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Employee profile not found'
-            ], 404);
-        }
+            if (!$employee) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Employee profile not found'
+                ], 404);
+            }
 
-        $today = Carbon::today();
-        $now = Carbon::now();
+            $today = Carbon::today();
+            $now = Carbon::now();
 
-        // Get today's attendance
-        $attendance = AttendanceEmployee::where('employee_id', $employee->id)
-            ->whereDate('date', $today)
-            ->first();
+            // Get today's attendance
+            $attendance = AttendanceEmployee::where('employee_id', $employee->id)
+                ->whereDate('date', $today)
+                ->first();
 
-        if (!$attendance) {
-            return response()->json([
-                'status' => false,
-                'message' => 'No attendance record found for today'
-            ], 404);
-        }
+            if (!$attendance) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No attendance record found for today'
+                ], 404);
+            }
 
-        // Check if already checked in (clock_in should not be "00:00:00")
-        if ($attendance->clock_in === '00:00:00') {
-            return response()->json([
-                'status' => false,
-                'message' => 'Please check in first'
-            ], 400);
-        }
+            // Check if checked in (assuming clock_in is string "00:00:00" when empty)
+            if ($attendance->clock_in === '00:00:00') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Please check in first'
+                ], 400);
+            }
 
-        // Check if already checked out
-//        if ($attendance->clock_out !== '00:00:00') {
-//            return response()->json([
-//                'status' => false,
-//                'message' => 'Already checked out today'
-//            ], 400);
-//        }
+            $clockOutTime = $now->format('H:i:s');
 
-        $clockOutTime =$now->format('H:i:s');
+            // Shift end time setup
+            $shiftEndStr = config('attendance.shift_end', '17:00:00');
+            [$h, $m, $s] = array_map('intval', explode(':', $shiftEndStr));
+            $shiftEnd = (clone $now)->setTime($h, $m, $s);
 
-        // Shift end time (HH:MM:SS). Adjust via config/env as needed.
-        $shiftEndStr = config('attendance.shift_end', '17:00:00');
-        [$h,$m, $s] = array_map('intval', explode(':', $shiftEndStr));
-        $shiftEnd = (clone$now)->setTime($h,$m, $s);
+            // Calculate early leaving
+            $earlyLeaving = '00:00:00';
+            if ($now->lt($shiftEnd)) {
+                $diffSeconds = $now->diffInSeconds($shiftEnd);
+                $earlyLeaving = gmdate('H:i:s', $diffSeconds);
+            }
 
-        // Calculate early leaving duration (TIME type) as HH:MM:SS
-        $earlyLeaving = '00:00:00';
-        if ($now->lt($shiftEnd)) {
-            $diffSeconds =$now->diffInSeconds($shiftEnd);
-            $earlyLeaving = gmdate('H:i:s', $diffSeconds);
-        }
+            // --- FIX START ---
+            $clockInCarbon = Carbon::parse($attendance->clock_in);
 
-        // Calculate total work duration
-        $clockInCarbon = Carbon::createFromFormat('H:i:s', $attendance->clock_in);
-        $clockOutCarbon = Carbon::createFromFormat('H:i:s', $clockOutTime);
+            $clockInCarbon->setDate($now->year, $now->month, $now->day);
 
-        // Handle cases where clock_out is next day (past midnight)
-        if ($clockOutCarbon->lt($clockInCarbon)) {
-            $clockOutCarbon->addDay();
-        }
+            $clockOutCarbon = Carbon::parse($clockOutTime);
+            $clockOutCarbon->setDate($now->year, $now->month, $now->day);
+            // --- FIX END ---
 
-        $workingSeconds =$clockInCarbon->diffInSeconds($clockOutCarbon);
+            // Handle cases where clock_out is next day (past midnight relative to clock_in)
+            if ($clockOutCarbon->lt($clockInCarbon)) {
+                $clockOutCarbon->addDay();
+            }
 
-        // Subtract total_rest (break time) if any
-        $restSeconds = 0;
-        if ($attendance->total_rest && $attendance->total_rest !== '00:00:00') {
-            [$rh,$rm, $rs] = array_map('intval', explode(':', $attendance->total_rest));
-            $restSeconds = ($rh * 3600) + ($rm * 60) +$rs;
-        }
+            $workingSeconds = $clockInCarbon->diffInSeconds($clockOutCarbon);
 
-        $netWorkingSeconds = max(0,$workingSeconds - $restSeconds);
-        $totalWork = gmdate('H:i:s', $netWorkingSeconds);
+            // Subtract total_rest
+            $restSeconds = 0;
+            if ($attendance->total_rest && $attendance->total_rest !== '00:00:00') {
+                // Check if total_rest contains a ":" before exploding to prevent errors
+                if (strpos($attendance->total_rest, ':') !== false) {
+                    [$rh, $rm, $rs] = array_map('intval', explode(':', $attendance->total_rest));
+                    $restSeconds = ($rh * 3600) + ($rm * 60) + $rs;
+                }
+            }
 
-        // Calculate overtime (time worked beyond shift end)
-        $overtime = '00:00:00';
-        $standardWorkSeconds = 8 * 3600; // 8 hours standard shift (configurable)
+            $netWorkingSeconds = max(0, $workingSeconds - $restSeconds);
+            $totalWork = gmdate('H:i:s', $netWorkingSeconds);
 
-        if ($netWorkingSeconds > $standardWorkSeconds) {
-            $overtimeSeconds =$netWorkingSeconds - $standardWorkSeconds;
-            $overtime = gmdate('H:i:s', $overtimeSeconds);
-        }
+            // Calculate overtime
+            $overtime = '00:00:00';
+            $standardWorkSeconds = 8 * 3600;
 
-        // Update attendance record
-        $attendance->update([
-            'clock_out'      => $clockOutTime,
-            'early_leaving'  => $earlyLeaving,
-            'overtime'       => $overtime,
-            // total_rest remains as is (should be updated by break tracking logic)
-        ]);
+            if ($netWorkingSeconds > $standardWorkSeconds) {
+                $overtimeSeconds = $netWorkingSeconds - $standardWorkSeconds;
+                $overtime = gmdate('H:i:s', $overtimeSeconds);
+            }
 
-        return response()->json([
-            'status' => true,
-            'message' => 'Checked out successfully',
-            'data' => [
-                'attendance' => $attendance->load('employee'),
-                'check_out_time' => $clockOutTime,
-                'total_work' => $totalWork,
+            // Update attendance record
+            $attendance->update([
+                'clock_out' => $clockOutTime,
                 'early_leaving' => $earlyLeaving,
                 'overtime' => $overtime,
-                'left_early' => $earlyLeaving !== '00:00:00',
-            ]
-        ], 200);
+            ]);
 
-    } catch (\Exception $e) {
+            return response()->json([
+                'status' => true,
+                'message' => 'Checked out successfully',
+                'data' => [
+                    'attendance' => $attendance->load('employee'),
+                    'check_out_time' => $clockOutTime,
+                    'total_work' => $totalWork,
+                    'early_leaving' => $earlyLeaving,
+                    'overtime' => $overtime,
+                    'left_early' => $earlyLeaving !== '00:00:00',
+                ]
+            ], 200);
+
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to check out',
@@ -312,9 +310,7 @@ class AttendanceController extends Controller
         }
     }
 
-    /**
-     * Get attendance summary
-     */
+
     public function summary(Request $request): JsonResponse
     {
         $employeeId = $request->get('employee_id');
