@@ -49,6 +49,10 @@ Route::middleware('auth:sanctum')->group(function () {
     //deployment
     Route::get('/deployment', [ProfileController::class, 'deployment']);
 
+
+    //award
+    Route::get('/awards', [PerformanceController::class, 'awards']);
+
     // Employee Management
     Route::apiResource('employees', EmployeeController::class);
     Route::get('/employees/{employee}/attendance', [EmployeeController::class, 'attendance']);

@@ -411,4 +411,81 @@ class PerformanceController extends Controller
             ], 500);
         }
     }
+
+
+    /**
+     * Retrieve the list of Awards/Recognitions
+     */
+    public function awards(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found'], 404);
+        }
+
+        $awards = $user->employee->awards()
+            ->latest('received_at')
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Awards retrieved successfully',
+            'data' => $this->formatAwards($awards),
+        ]);
+    }
+
+    /**
+     * Retrieve the list of Sanctions/Warnings
+     */
+    public function sanctions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found'], 404);
+        }
+
+        // Assuming 'sanctions' is a hasMany relationship on the Employee model
+        $sanctions = $user->employee->sanctions()
+            ->latest('issued_at') // Sort by newest first
+            ->get();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Sanctions retrieved successfully',
+            'data' => $this->formatSanctions($sanctions),
+        ]);
+    }
+
+// -----------------------------------------------------------------------------
+// HELPER METHODS
+// -----------------------------------------------------------------------------
+
+    private function formatAwards($awards)
+    {
+        return $awards->map(function ($award) {
+            return [
+                'id'          => $award->id,
+                'title'       => $award->award_type,
+                'description' => $award->description,
+                'type'        => $award->award_type,        // e.g., 'weekly_guard', 'monthly_guard'
+                'date'        => $award->received_at->format('m/d/Y'), // 11/19/2025
+            ];
+        });
+    }
+
+    private function formatSanctions($sanctions)
+    {
+        return $sanctions->map(function ($sanction) {
+            return [
+                'id'          => $sanction->id,
+                'title'       => $sanction->title,       // e.g., "Repeated Lateness Warning"
+                'description' => $sanction->description, // e.g., "This is an official warning..."
+                // Frontend might need severity for color coding (Red dot)
+                'severity'    => $sanction->severity,    // e.g., 'high', 'medium', 'low'
+                'date'        => $sanction->issued_at->format('m/d/Y'), // 11/19/2025
+            ];
+        });
+    }
 }
