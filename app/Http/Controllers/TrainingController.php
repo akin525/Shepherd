@@ -93,7 +93,7 @@ class TrainingController extends Controller
                 'id'            => $training->id,
                 'title'         => $training->name,        // CSO March Parade
                 'image_url'     => $training->image_url,
-                'date'          => $training->start_date->format('d/m/Y'), // 04/11/2025
+                'date'          => $training->start_date,
                 'location'      => $training->location,
                 'training_type' => $training->type,
                 'is_expanded'   => false,
