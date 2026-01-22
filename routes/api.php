@@ -45,6 +45,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar']);
 
+
+    //deployment
+    Route::get('/deployment', [ProfileController::class, 'deployment']);
+
     // Employee Management
     Route::apiResource('employees', EmployeeController::class);
     Route::get('/employees/{employee}/attendance', [EmployeeController::class, 'attendance']);
