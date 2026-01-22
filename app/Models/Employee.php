@@ -294,7 +294,7 @@ class Employee extends Model
      */
     public function appraisals(): HasMany
     {
-        return $this->hasMany(Appraisal::class, 'employee_id');
+        return $this->hasMany(Appraisal::class, 'employee');
     }
 
     /**
