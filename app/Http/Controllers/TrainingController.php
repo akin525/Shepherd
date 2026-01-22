@@ -17,7 +17,7 @@ class TrainingController extends Controller
     {
         $user = $request->user();
 
-        $calendarEvents = Trainers::
+        $calendarEvents = Trainings::
             whereMonth('start_date', now()->month)
             ->get()
             ->map(function ($training) {
