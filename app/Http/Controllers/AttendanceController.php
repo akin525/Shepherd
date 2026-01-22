@@ -231,12 +231,12 @@ class AttendanceController extends Controller
         }
 
         // Check if already checked out
-        if ($attendance->clock_out !== '00:00:00') {
-            return response()->json([
-                'status' => false,
-                'message' => 'Already checked out today'
-            ], 400);
-        }
+//        if ($attendance->clock_out !== '00:00:00') {
+//            return response()->json([
+//                'status' => false,
+//                'message' => 'Already checked out today'
+//            ], 400);
+//        }
 
         $clockOutTime =$now->format('H:i:s');
 
