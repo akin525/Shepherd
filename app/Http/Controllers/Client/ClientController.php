@@ -715,7 +715,7 @@ class ClientController extends Controller
             $statusLabel = $item->status == 1 ? 'Active' : 'Inactive';
             $statusColor = $item->status == 1 ? 'text-green-600' : 'text-gray-500';
 
-            $role = $employee->designation ? $employee->designation->name : 'Staff';
+            $role = $employee->user->type ?? 'Staff';
 
             return [
                 'id' => $item->id,
