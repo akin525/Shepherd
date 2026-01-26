@@ -684,16 +684,105 @@ class ClientController extends Controller
     public function staff(Request $request)
     {
         $perPage = $request->input('per_page', 20);
+        $search = $request->input('search');
 
-        $data = ClientStaff::with('employee')->orderBy('id', 'desc')->paginate($perPage);
+       $query = ClientStaff::with('employee');
+
+        if ($search) {
+            $query->whereHas('employee', function ($q) use ($search) {
+                $q->where('name', 'LIKE', "%{$search}%")
+                    ->orWhere('email', 'LIKE', "%{$search}%");
+            });
+        }
+
+        $staffList = $query->orderBy('id', 'desc')->paginate($perPage);
+
+        $staffList->getCollection()->transform(function ($item) {
+            $employee = $item->employee;
+
+            $fullName = $employee->name ?? 'Unknown Staff';
+            $nameParts = explode(' ', trim($fullName));
+            $initials = '';
+
+            if (count($nameParts) >= 2) {
+                // First letter of first name + First letter of last name
+                $initials = strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1));
+            } else {
+                // Fallback for single names
+                $initials = strtoupper(substr($fullName, 0, 2));
+            }
+
+            $statusLabel = $item->status == 1 ? 'Active' : 'Inactive';
+            $statusColor = $item->status == 1 ? 'text-green-600' : 'text-gray-500';
+
+            $role = $employee->designation ? $employee->designation->name : 'Staff';
+
+            return [
+                'id' => $item->id,
+                'staff_member' => [
+                    'full_name' => $fullName,
+                    'initials'  => $initials,
+                ],
+                'email' => $employee->email ?? 'N/A',
+                'role' => $role,
+
+                'resume_time' => $employee->resumption_time ?? '--:--',
+
+                'status' => $statusLabel,
+
+                'rating' => $item->rating ?? null,
+                'rating_formatted' => isset($item->rating) ? number_format($item->rating, 1) : 'No rating',
+            ];
+        });
 
         return response()->json([
             'status' => true,
             'message' => 'Data retrieved successfully',
-            'data' => $data
+            'data' => $staffList
         ], 200);
     }
 
+    public function storePlan(Request $request)
+    {
+        $request->validate([
+            'service' => 'required|string|max:255',
+            'staff_count' => 'required|integer|min:1',
+            'location' => 'required|string|max:255',
+        ]);
+
+        try {
+            $user = Auth::user();
+
+            $subscription = Subscription::create([
+                'user_id' => $user->id,
+                'client_id' => $user->client_id ?? null,
+                'service_name' => $request->service,
+                'staff_count' => $request->staff_count,
+                'notes' => "Location: " . $request->location,
+                'amount' => 0.00,
+                'status' => 'pending',
+                'billing_cycle' => 'monthly',
+                'currency' => 'NGN',
+                'equipment_count' => 0,
+                'start_date' => Carbon::now(),
+                'end_date' => Carbon::now()->addMonth(),
+                'auto_renew' => 1
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Plan requested successfully',
+                'data' => $subscription
+            ], 201);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to create plan',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
     public function changePassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
