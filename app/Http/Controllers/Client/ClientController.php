@@ -736,7 +736,7 @@ class ClientController extends Controller
         return response()->json([
             'status' => true,
             'message' => 'Data retrieved successfully',
-            'data' => []
+            'data' => $staffList
         ], 200);
     }
 
