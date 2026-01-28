@@ -16,5 +16,9 @@ class EmployeeDeployment extends Model
     {
         return $this->belongsTo(Employee::class, 'employee_id');
     }
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class, 'client_id');
+    }
 
 }

@@ -510,6 +510,7 @@ class ProfileController extends Controller
             ->where('status', 1)
             ->latest()
             ->first();
+        $company= $employee->deployments->client()->first();
 
         $historyDeployments = $employee->deployments()
             ->where('status', '!=', 1)
@@ -525,6 +526,7 @@ class ProfileController extends Controller
                 'current' => $activeDeployment ? $this->formatCurrentDeployment($activeDeployment) : null,
                 // The bottom list
                 'history' => $historyDeployments,
+                'company_name' => $company->name,
             ]
         ]);
     }
