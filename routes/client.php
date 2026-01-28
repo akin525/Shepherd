@@ -15,6 +15,7 @@ Route::group(['prefix' => 'client'], function () {
         //client
         Route::get('/dashboard', [ClientController::class, 'dashboard']);
         Route::get('/subscription', [ClientController::class, 'Subscriptionindex']);
+        Route::post('/request-service', [ClientController::class, 'requestService']);
         Route::get('/payment', [ClientController::class, 'paymentindex']);
         Route::get('/me', [ClientAuthController::class, 'me']);
         Route::get('/staff', [ClientController::class, 'staff']);

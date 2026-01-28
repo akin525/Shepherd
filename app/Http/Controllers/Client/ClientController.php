@@ -742,7 +742,7 @@ class ClientController extends Controller
         ], 200);
     }
 
-    public function storePlan(Request $request)
+    public function requestService(Request $request)
     {
         $request->validate([
             'service' => 'required|string|max:255',
