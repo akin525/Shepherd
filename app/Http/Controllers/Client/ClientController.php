@@ -776,7 +776,7 @@ class ClientController extends Controller
                 'start_date'=>$request->start_date ??Carbon::now(),
                 'end_date' =>$request->end_date?? Carbon::now()->addMonth(),
                 'service'=>$request->service,
-                'service_type'=>$request->service_type,
+                'service_type'=>$request->service,
                 'number_of_staffs'=>$request->staff_count,
             ]);
             return response()->json([
