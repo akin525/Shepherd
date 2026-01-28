@@ -720,10 +720,7 @@ class ClientController extends Controller
 
             return [
                 'id' => $item->id,
-                'staff_member' => [
-                    'full_name' => $fullName,
-                    'initials'  => $initials,
-                ],
+                'name' => $fullName,
                 'email' => $employee->email ?? 'N/A',
                 'role' => $role,
 
