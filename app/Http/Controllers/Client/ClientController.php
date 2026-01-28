@@ -566,22 +566,22 @@ class ClientController extends Controller
             });
         }
 
-        if ($type->isNotEmpty()) {
-            // type can be saved as 'service' or 'type'
-            $query->where(function ($sub) use ($type) {
-                $sub->where('type', $type)->orWhere('service', $type);
-            });
-        }
+//        if ($type->isNotEmpty()) {
+//            // type can be saved as 'service' or 'type'
+//            $query->where(function ($sub) use ($type) {
+//                $sub->where('type', $type)->orWhere('service', $type);
+//            });
+//        }
 
-        if ($status->isNotEmpty()) {
-            $normalized = strtolower($status);
-            if ($normalized === 'dispensed') {
-                // Map UI "Dispensed" to DB statuses
-                $query->whereIn('status', ['dispensed', 'paid', 'deployed', 'completed']);
-            } else {
-                $query->where('status', $normalized);
-            }
-        }
+//        if ($status->isNotEmpty()) {
+//            $normalized = strtolower($status);
+//            if ($normalized === 'dispensed') {
+//                // Map UI "Dispensed" to DB statuses
+//                $query->whereIn('status', ['dispensed', 'paid', 'deployed', 'completed']);
+//            } else {
+//                $query->where('status', $normalized);
+//            }
+//        }
 
         if ($from) {
             $query->whereDate('created_at', '>=', $from);
@@ -598,14 +598,14 @@ class ClientController extends Controller
                 // Normalize
                 $status = strtolower($p->status);
                 $status_label = $status;
-                $status_dot = 'orange';
-                if (in_array($status, ['dispensed', 'paid', 'deployed', 'completed'])) {
-                    $status_label = 'Dispensed';
-                    $status_dot = 'green';
-                } elseif ($status === 'pending') {
-                    $status_label = 'Pending';
-                    $status_dot = 'orange';
-                }
+//                $status_dot = 'orange';
+//                if (in_array($status, ['dispensed', 'paid', 'deployed', 'completed'])) {
+//                    $status_label = 'Dispensed';
+//                    $status_dot = 'green';
+//                } elseif ($status === 'pending') {
+//                    $status_label = 'Pending';
+//                    $status_dot = 'orange';
+//                }
 
                 // Currency and amount formatting (e.g., NPR8,000)
                 $currency = $p->currency ?? 'NGN';
@@ -621,7 +621,7 @@ class ClientController extends Controller
                     'type'             => $p->type ?? $p->service ?? '—',
                     'number_of_funds'  => (int) ($p->number_of_funds ?? $p->staff_count ?? 0),
                     'status'           => $status_label,
-                    'status_dot'       => $status_dot,
+//                    'status_dot'       => $status_dot,
                     'date'             => Carbon::parse($p->payment_date ?? $p->created_at)->format('d, F Y'),
 //                    'invoice_url'      => route('payments.invoice', ['id' => $p->id]),
                 ];
