@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\ClientContact;
 use App\Models\ClientDocument;
 use App\Models\ClientStaff;
+use App\Models\Complaint;
 use App\Models\Deposit;
 use App\Models\Payment;
 use App\Models\Subscription;
@@ -619,7 +620,7 @@ class ClientController extends Controller
                     'payment_id'       => $paymentId,
                     'amount'           => $amountStr,
                     'type'             => $p->type ?? $p->service ?? '—',
-                    'number_of_funds'  => (int) ($p->number_of_funds ?? $p->staff_count ?? 0),
+                    'staff'  => (int) ($p->number_of_funds ?? $p->staff_count ?? 0),
                     'status'           => $status_label,
 //                    'status_dot'       => $status_dot,
                     'date'             => Carbon::parse($p->payment_date ?? $p->created_at)->format('d, F Y'),
@@ -769,6 +770,14 @@ class ClientController extends Controller
                 'auto_renew' => 1
             ]);
 
+            $subscriptionItem=SubscriptionItem::create([
+                'subscription_id'=>$subscription->id,
+                'user_id'=>$user->id,
+                'start_date'=>$request->start_date ??Carbon::now(),
+                'end_date' =>$request->end_date?? Carbon::now()->addMonth(),
+                'service'=>$request->service,
+                'service_type'=>$request->service_type,
+            ]);
             return response()->json([
                 'status' => true,
                 'message' => 'Plan requested successfully',
@@ -878,6 +887,59 @@ class ClientController extends Controller
             return "{$s} - {$e}";
         }
         return $s ?? $e ?? 'N/A';
+    }
+
+    public function submitEscalation(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'escalation_type' => 'required|string|max:255',
+            'staff_identifier' => 'required|string|max:255',
+            'image' => 'nullable|image|mimes:jpeg,png,webp,jpg|max:5120',
+            'message' => 'required|string|max:1000',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = Auth::user();
+            $attachmentPath = null;
+
+            if ($request->hasFile('image')) {
+                $attachmentPath = $request->file('image')->store('escalations', 'public');
+            }
+
+            $complaint = Complaint::create([
+                'user_id' => $user->id,
+                'client_id' => $user->client_id ?? null,
+
+                'type' => $request->escalation_type,
+                'subject' => $request->staff_identifier,
+                'description' => $request->message,
+                'attachment' => $attachmentPath,
+
+                'status' => 'pending',
+                'priority' => 'medium',
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Escalation submitted successfully. We will investigate shortly.',
+                'data' => $complaint
+            ], 201);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to submit escalation',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
 
