@@ -505,17 +505,25 @@ class ProfileController extends Controller
 
         $employee = $user->employee;
 
+        if (!$employee) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Employee profile not found for this user',
+                'data' => null
+            ], 404);
+        }
 
         $activeDeployment = $employee->deployments()
             ->where('status', 1)
             ->latest()
             ->first();
-        $company= $employee->deployments->client()->first();
+
+        $company = $activeDeployment ? $activeDeployment->client : null;
 
         $historyDeployments = $employee->deployments()
             ->where('status', '!=', 1)
             ->orderBy('created_at', 'desc')
-            ->take(10) // Limit history to recent ones
+            ->take(10)
             ->get();
 
         return response()->json([
@@ -524,13 +532,11 @@ class ProfileController extends Controller
             'data' => [
                 'has_active_deployment' => (bool) $activeDeployment,
                 'current' => $activeDeployment ? $this->formatCurrentDeployment($activeDeployment) : null,
-                // The bottom list
                 'history' => $historyDeployments,
-                'company_name' => $company->name,
+                'company_name' => $company ? $company->name : null,
             ]
         ]);
     }
-
     /**
      * Formats the Active Deployment data (Status, Schedule, Location)
      */
