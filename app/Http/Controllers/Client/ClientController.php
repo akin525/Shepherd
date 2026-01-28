@@ -764,6 +764,7 @@ class ClientController extends Controller
                 'equipment_count' => 0,
                 'start_date' =>$request->start_date?? Carbon::now(),
                 'end_date' =>$request->end_date ?? Carbon::now()->addMonth(),
+                'next_payment_date'=>$request->end_date ?? Carbon::now()->addMonth(),
                 'auto_renew' => 1
             ]);
 
