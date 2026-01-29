@@ -458,7 +458,7 @@ class PayrollController extends Controller
         $user = $request->user();
 
         if (!$user) {
-            return response()->json(['status' => false, 'message' => 'User not found'], 404);
+            return response()->json(['status' => false, 'message' => 'User not found']);
         }
 
         $employee = $user->employee;
