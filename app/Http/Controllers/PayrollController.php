@@ -499,7 +499,7 @@ class PayrollController extends Controller
                     ],
                     'overtime' => [
                         'label' => 'Overtime',
-                        'value' => 0,
+                        'value' => +0,
                         'raw'   => 0,
                         'is_positive' => true,
                     ],
