@@ -60,14 +60,17 @@ class IssueController extends Controller
                 'errors' => $validator->errors()
             ], 422);
         }
-
+        $activeDeployment = $employee->deployments()
+            ->where('status', 1)
+            ->latest()
+            ->first();
 
         $issue = Issue::create([
             'employee_id'  => $user->employee->id,
             'title'        => $request->title,
             'description'  => $request->description,
             'category'     => $request->category,
-            'recipient_id' => $employee->deployments->client_id,
+            'recipient_id' => $activeDeployment->client_id,
             'status'       => 'pending',
         ]);
 
