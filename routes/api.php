@@ -2,6 +2,8 @@
 
 use App\Http\Controllers\Client\ClientAuthController;
 use App\Http\Controllers\Client\ClientController;
+use App\Http\Controllers\IssueController;
+use App\Http\Controllers\ResignationController;
 use App\Http\Controllers\TrainingController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -78,10 +80,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/leaves/{id}/reject', [LeaveController::class, 'reject']);
 
     // Payroll Management
-    Route::get('/payroll', [PayrollController::class, 'index']);
+    Route::get('/payroll', [PayrollController::class, 'payroll']);
     Route::get('/payroll/payslips', [PayrollController::class, 'payslips']);
     Route::get('/payroll/payslips/{id}', [PayrollController::class, 'showPayslip']);
     Route::get('/payroll/salary-breakdown', [PayrollController::class, 'salaryBreakdown']);
+
+    //report issue
+    Route::get('/issue-category', [IssueController::class, 'create']);
+    Route::post('/issue', [IssueController::class, 'store']);
+
+    //resign
+    Route::put('/resign', [ResignationController::class, 'store']);
 
     // Announcements
     Route::get('/announcements', [AnnouncementController::class, 'index']);

@@ -451,4 +451,95 @@ class PayrollController extends Controller
             'data' => $report
         ]);
     }
+
+
+    public function payroll(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found'], 404);
+        }
+
+        $employee = $user->employee;
+
+        $baseSalary = $employee->salary ?? 0.0;
+        $payCycle   = $employee->payment_cycle ?? '30 Days';
+        $daysWorked = $employee->attendances()
+            ->whereMonth('date', now()->month)
+            ->where('status', 'present')
+            ->count();
+
+        $overtimeAmount = $employee->overtimeRecords()
+            ->whereMonth('date', now()->month)
+            ->sum('amount'); // e.g., 15000
+
+        $deductionsList = $employee->deductions()
+            ->whereMonth('date', now()->month)
+            ->get();
+
+        $totalDeductions = $deductionsList->sum('amount');
+
+        $expectedSalary = $baseSalary + $overtimeAmount - $totalDeductions;
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Payroll details retrieved',
+            'data' => [
+                'summary' => [
+                    'pay_cycle'   => $payCycle,
+                    'days_worked' => $daysWorked . ' Days',
+                ],
+
+                'breakdown' => [
+                    'base_salary' => [
+                        'label' => 'Base Salary',
+                        'value' => 'N' . number_format($baseSalary),
+                        'raw'   => $baseSalary,
+                    ],
+                    'overtime' => [
+                        'label' => 'Overtime',
+                        'value' => '+' . number_format($overtimeAmount),
+                        'raw'   => $overtimeAmount,
+                        'is_positive' => true,
+                    ],
+                    'deductions' => [
+                        'label' => 'Gross Deductions',
+                        'value' => '-' . number_format($totalDeductions), // "-4,000"
+                        'raw'   => $totalDeductions,
+                        'is_positive' => false, // Frontend uses this to color it Red
+                        'items' => $deductionsList->map(function($d) {
+                            return [
+                                'reason' => $d->reason, // "Missed Clock-in"
+                                'amount' => '-' . number_format($d->amount), // "-2,000"
+                            ];
+                        }),
+                    ],
+                    'expected_salary' => [
+                        'label' => 'Expected Salary',
+                        'value' => 'N' . number_format($expectedSalary),
+                        'raw'   => $expectedSalary,
+                    ]
+                ],
+
+                // Bottom Section: Calendar Data
+                'calendar' => [
+                    'current_month' => now()->format('F Y'), // "April 2025"
+                    'highlighted_dates' => $this->getPayrollCalendarEvents($employee),
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Helper to get calendar events (pay days, holidays, etc.)
+     */
+    private function getPayrollCalendarEvents($employee)
+    {
+        // Return array of dates to highlight on the calendar
+        return [
+            ['date' => '2025-04-20', 'type' => 'pay_day'],
+            // Add other events based on your logic
+        ];
+    }
 }
