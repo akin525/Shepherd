@@ -470,9 +470,9 @@ class PayrollController extends Controller
             ->where('status', 'present')
             ->count();
 
-        $overtimeAmount = $employee->overtimeRecords()
-            ->whereMonth('date', now()->month)
-            ->sum('amount'); // e.g., 15000
+//        $overtimeAmount = $employee->overtimeRecords()
+//            ->whereMonth('date', now()->month)
+//            ->sum('amount'); // e.g., 15000
 
         $deductionsList = $employee->deductions()
             ->whereMonth('date', now()->month)
@@ -480,7 +480,7 @@ class PayrollController extends Controller
 
         $totalDeductions = $deductionsList->sum('amount');
 
-        $expectedSalary = $baseSalary + $overtimeAmount - $totalDeductions;
+        $expectedSalary = $baseSalary  - $totalDeductions;
 
         return response()->json([
             'status' => true,
@@ -499,8 +499,8 @@ class PayrollController extends Controller
                     ],
                     'overtime' => [
                         'label' => 'Overtime',
-                        'value' => '+' . number_format($overtimeAmount),
-                        'raw'   => $overtimeAmount,
+                        'value' => 0,
+                        'raw'   => 0,
                         'is_positive' => true,
                     ],
                     'deductions' => [
