@@ -80,7 +80,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/leaves/{id}/reject', [LeaveController::class, 'reject']);
 
     // Payroll Management
-    Route::get('/payroll', [PayrollController::class, 'payroll']);
+    Route::get('/my-payroll', [PayrollController::class, 'payroll']);
     Route::get('/payroll/payslips', [PayrollController::class, 'payslips']);
     Route::get('/payroll/payslips/{id}', [PayrollController::class, 'showPayslip']);
     Route::get('/payroll/salary-breakdown', [PayrollController::class, 'salaryBreakdown']);
