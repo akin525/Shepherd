@@ -344,4 +344,12 @@ class Employee extends Model
 
         return $start->diffInYears($end) . ' years, ' . $start->diffInMonths($end) % 12 . ' months';
     }
+
+    // In app/Models/Employee.php
+
+    public function deductions()
+    {
+        // This assumes you have a Deduction model
+        return $this->hasMany(Deduction::class);
+    }
 }
