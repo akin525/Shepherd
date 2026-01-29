@@ -67,7 +67,7 @@ class IssueController extends Controller
             'title'        => $request->title,
             'description'  => $request->description,
             'category'     => $request->category,
-            'recipient_id' => $employee->deployments->client->id,
+            'recipient_id' => $employee->deployments->client_id,
             'status'       => 'pending',
         ]);
 
