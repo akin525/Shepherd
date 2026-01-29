@@ -18,11 +18,12 @@ class ResignationController extends Controller
         if (!$user || !$user->employee) {
             return response()->json(['status' => false, 'message' => 'Employee record not found'], 404);
         }
+        $employee = $user->employee;
 
         $validator = Validator::make($request->all(), [
             'description'      => 'required|string',
             'resignation_date' => 'nullable|date|after:today',
-            'recipient_id'     => 'nullable|exists:users,id',
+//            'recipient_id'     => 'nullable|exists:users,id',
         ]);
 
         if ($validator->fails()) {
@@ -35,6 +36,10 @@ class ResignationController extends Controller
 
         $noticeDate = now();
 
+        $activeDeployment = $employee->deployments()
+            ->where('status', 1)
+            ->latest()
+            ->first();
 
         $resignationDate = $request->input('resignation_date')
             ? Carbon::parse($request->input('resignation_date'))
