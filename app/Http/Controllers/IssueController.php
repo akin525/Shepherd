@@ -43,13 +43,14 @@ class IssueController extends Controller
         if (!$user) {
             return response()->json(['status' => false, 'message' => 'User not found'], 404);
         }
+        $employee = $user->employee;
 
 
         $validator = Validator::make($request->all(), [
             'title'        => 'required|string|max:255',
             'description'  => 'required|string',
             'category'     => 'required|string',
-            'recipient_id' => 'required|exists:users,id',
+//            'recipient_id' => 'required|exists:users,id',
         ]);
 
         if ($validator->fails()) {
@@ -60,12 +61,13 @@ class IssueController extends Controller
             ], 422);
         }
 
+
         $issue = Issue::create([
             'employee_id'  => $user->employee->id,
             'title'        => $request->title,
             'description'  => $request->description,
             'category'     => $request->category,
-            'recipient_id' => $request->recipient_id,
+            'recipient_id' => $employee->deployments->client->id,
             'status'       => 'pending',
         ]);
 
