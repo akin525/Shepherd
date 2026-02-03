@@ -21,5 +21,6 @@ Route::group(['prefix' => 'client'], function () {
         Route::get('/staff', [ClientController::class, 'staff']);
         Route::post('/change-password', [ClientController::class, 'changePassword']);
         Route::get('account-info', [ClientController::class, 'accountInfo']);
+        Route::post('/submit-escalation', [ClientController::class, 'submitEscalation']);
     });
 });
