@@ -915,12 +915,11 @@ class ClientController extends Controller
 
             $complaint = Complaint::create([
                 'complaint_from'    => $user->id,
-                'client_id'         => $user->client_id ?? null,
                 'complaint_against' => $request->staff_identifier,
                 'title'             => $request->escalation_type,
                 'description'       => $request->message,
+                'created_by'        => $user->name ?? 'System',
                 'attachment'        => $attachmentPath,
-                'created_by'        => $user->id,
                 'status'            => 'pending',
                 'priority'          => 'medium',
             ]);
