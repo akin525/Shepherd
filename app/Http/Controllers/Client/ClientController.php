@@ -914,11 +914,14 @@ class ClientController extends Controller
             }
 
             $complaint = Complaint::create([
+                // Table Column => Request/Auth Data
                 'complaint_from'    => $user->id,
                 'complaint_against' => $request->staff_identifier,
                 'title'             => $request->escalation_type,
                 'description'       => $request->message,
                 'created_by'        => $user->name ?? 'System',
+
+                // These columns must be added to your SQL table first (see step 2)
                 'attachment'        => $attachmentPath,
                 'status'            => 'pending',
                 'priority'          => 'medium',
