@@ -892,7 +892,7 @@ class ClientController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'escalation_type' => 'required|string|max:255',
-            'staff_identifier' => 'required|string|max:255',
+            'staff_identifier' => 'required|integer', // Changed to integer to match your int(11) column
             'image' => 'nullable|image|mimes:jpeg,png,webp,jpg|max:5120',
             'message' => 'required|string|max:1000',
         ]);
@@ -914,22 +914,21 @@ class ClientController extends Controller
             }
 
             $complaint = Complaint::create([
-                // Table Column => Request/Auth Data
                 'complaint_from'    => $user->id,
+                'client_id'         => $user->client_id ?? null,
                 'complaint_against' => $request->staff_identifier,
                 'title'             => $request->escalation_type,
+                'complaint_date'    => now()->format('Y-m-d'), // REQUIRED by your DB schema
                 'description'       => $request->message,
-                'created_by'        => $user->name ?? 'System',
-
-                // These columns must be added to your SQL table first (see step 2)
                 'attachment'        => $attachmentPath,
                 'status'            => 'pending',
                 'priority'          => 'medium',
+                'created_by'        => $user->name ?? 'System',
             ]);
 
             return response()->json([
                 'status' => true,
-                'message' => 'Escalation submitted successfully. We will investigate shortly.',
+                'message' => 'Escalation submitted successfully.',
                 'data' => $complaint
             ], 201);
 
@@ -941,7 +940,6 @@ class ClientController extends Controller
             ], 500);
         }
     }
-
 
 
 }

@@ -11,14 +11,16 @@ class Complaint extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'user_id',
+        'complaint_from',
         'client_id',
-        'type',
-        'subject',
+        'complaint_against',
+        'title',
+        'complaint_date',
         'description',
         'attachment',
         'status',
-        'priority'
+        'priority',
+        'created_by'
     ];
 
 
