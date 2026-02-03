@@ -915,7 +915,7 @@ class ClientController extends Controller
 
             $complaint = Complaint::create([
                 'complaint_from'    => $user->id,
-                'client_id'         => $user->client_id ?? null,
+                'client_id'         => $user->client->id ?? null,
                 'complaint_against' => $request->staff_identifier,
                 'title'             => $request->escalation_type,
                 'complaint_date'    => now()->format('Y-m-d'), // REQUIRED by your DB schema
