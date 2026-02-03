@@ -892,7 +892,7 @@ class ClientController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'escalation_type' => 'required|string|max:255',
-            'staff_identifier' => 'required|integer', // Changed to integer to match your int(11) column
+            'staff_identifier' => 'required', // Changed to integer to match your int(11) column
             'image' => 'nullable|image|mimes:jpeg,png,webp,jpg|max:5120',
             'message' => 'required|string|max:1000',
         ]);
