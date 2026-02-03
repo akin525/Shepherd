@@ -914,16 +914,15 @@ class ClientController extends Controller
             }
 
             $complaint = Complaint::create([
-                'user_id' => $user->id,
-                'client_id' => $user->client_id ?? null,
-
-                'type' => $request->escalation_type,
-                'subject' => $request->staff_identifier,
-                'description' => $request->message,
-                'attachment' => $attachmentPath,
-
-                'status' => 'pending',
-                'priority' => 'medium',
+                'complaint_from'    => $user->id,
+                'client_id'         => $user->client_id ?? null,
+                'complaint_against' => $request->staff_identifier,
+                'title'             => $request->escalation_type,
+                'description'       => $request->message,
+                'attachment'        => $attachmentPath,
+                'created_by'        => $user->id,
+                'status'            => 'pending',
+                'priority'          => 'medium',
             ]);
 
             return response()->json([
