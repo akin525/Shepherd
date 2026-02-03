@@ -906,7 +906,7 @@ class ClientController extends Controller
         }
 
         try {
-            $user = Auth::user();
+            $user = $request->user();
             $attachmentPath = null;
 
             if ($request->hasFile('image')) {
