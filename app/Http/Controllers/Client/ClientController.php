@@ -731,7 +731,7 @@ class ClientController extends Controller
 
                 'status' => $statusLabel,
 
-                'rating' => $item->rating ?? null,
+                'rating' => $employee->rating ?? null,
                 'rating_formatted' => isset($item->rating) ? number_format($item->rating, 1) : 'No rating',
             ];
         });
