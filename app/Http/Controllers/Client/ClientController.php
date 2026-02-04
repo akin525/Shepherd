@@ -756,7 +756,7 @@ class ClientController extends Controller
 
             $subscription = Subscription::create([
                 'user_id' => $user->id,
-                'client_id' => $user->client_id ?? null,
+                'client_id' => $user->client->id ?? null,
                 'service_name' => $request->service,
                 'staff_count' => $request->staff_count,
                 'notes' => "Location: " . $request->location,
