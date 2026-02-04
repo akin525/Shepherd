@@ -727,7 +727,7 @@ class ClientController extends Controller
                 'email' => $employee->email ?? 'N/A',
                 'role' => $role,
 
-                'resume_time' => $employee->resumption_time ?? '--:--',
+                'resume_time' => $employee->deployments->resumption_time ?? '--:--',
 
                 'status' => $statusLabel,
 
