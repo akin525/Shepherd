@@ -1059,9 +1059,9 @@ class ClientController extends Controller
         ], 500);
     }
 
-    public function verifyPayment(Request $request, SaySwitchServices $saySwitch)
+    public function verifyPayment(Request $request, $reference, SaySwitchServices $saySwitch)
     {
-        $reference = $request->query('reference');
+//        $reference = $reference;
 
         if (!$reference) {
             return response()->json(['status' => false, 'message' => 'No reference found'], 400);
