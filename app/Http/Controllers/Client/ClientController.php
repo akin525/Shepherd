@@ -1007,7 +1007,7 @@ class ClientController extends Controller
         if (!$subscription || $subscription->amount <= 0) {
             return response()->json([
                 'status' => false,
-                'message' => 'Kindly contact admin to attach a valid amount to this subscription.',
+                'message' => 'Approval in process, kindly wait.',
             ]);
         }
 
