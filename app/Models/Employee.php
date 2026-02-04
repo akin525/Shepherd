@@ -276,7 +276,8 @@ class Employee extends Model
         return $this->hasMany(EmployeeDocument::class, 'employee_id');
 
 
-    } public function deployments(): HasMany
+    }
+    public function deployments(): HasMany
     {
         return $this->hasMany(EmployeeDeployment::class, 'employee_id');
     }
