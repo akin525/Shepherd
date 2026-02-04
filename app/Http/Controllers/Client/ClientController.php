@@ -1083,7 +1083,7 @@ class ClientController extends Controller
                 ]);
 
                  $payment->subscriptionItem->update(['status' => 'paid']);
-                 $payment->subscriptionItem->subscription->update(['status' => 'paid']);
+                 $payment->subscriptionItem->subscription->update(['status' => 'active']);
 
                 return response()->json([
                     'status' => true,
