@@ -1082,7 +1082,8 @@ class ClientController extends Controller
                     'notes'            => 'Verification successful: ' . $verification['message']
                 ]);
 
-                // $payment->subscription->update(['status' => 'active']);
+                 $payment->subscriptionItem->update(['status' => 'paid']);
+                 $payment->subscriptionItem->subscription->update(['status' => 'paid']);
 
                 return response()->json([
                     'status' => true,
