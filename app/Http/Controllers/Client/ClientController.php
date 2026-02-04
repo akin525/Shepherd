@@ -13,12 +13,14 @@ use App\Models\EscalationType;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
+use App\Services\SaySwitchServices;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -951,4 +953,148 @@ class ClientController extends Controller
         ]);
     }
 
+    public function updateSecurity(Request $request)
+    {
+        $user = Auth::user();
+
+        $user->two_factor_enabled = !$user->two_factor_enabled;
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => $user->two_factor_enabled ? '2FA Enabled' : '2FA Disabled',
+            'enabled' => (bool)$user->two_factor_enabled
+        ]);
+    }
+
+    public function updatePaymentMethod(Request $request)
+    {
+
+        $user = Auth::user();
+
+        $user->update([
+            'card_brand' => 'Visa',
+            'card_last_four' => '1234'
+        ]);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Payment method updated successfully',
+            'data' => [
+                'brand' => $user->card_brand,
+                'last4' => $user->card_last_four
+            ]
+        ]);
+    }
+
+    public function makePayment(Request $request, SaySwitchServices $saySwitch)
+    {
+        $validator = Validator::make($request->all(), [
+            'callback_url' => 'required|url',
+            'subscription_id' => 'required|exists:subscriptions,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $subscription = Subscription::find($request->subscription_id);
+
+        if (!$subscription || $subscription->amount <= 0) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Kindly contact admin to attach a valid amount to this subscription.',
+            ]);
+        }
+
+        $user = Auth::user();
+        $reference = 'SHEP-' . strtoupper(uniqid());
+
+        $paymentData = [
+            'amount'       => $subscription->amount,
+            'email'        => $user->email,
+            'reference'    => $reference,
+            'callback_url' => $request->callback_url,
+            'currency'     => 'NGN',
+        ];
+
+        $result = $saySwitch->initializeTransaction($paymentData);
+
+        if ($result && $result['success']) {
+            try {
+                Payment::create([
+                    'subscription_id' => $subscription->id,
+                    'user_id'         => $user->id,
+                    'reference'       => $reference,
+                    'transaction_id'  => $result['data']['access_code'] ?? null,
+                    'service'         => $subscription->name ?? 'Subscription Payment',
+                    'amount'          => $subscription->amount,
+                    'currency'        => 'NGN',
+                    'status'          => 'pending',
+                    'payment_gateway' => 'SaySwitch',
+                    'notes'           => 'Initialization for ' . ($subscription->name ?? 'Service'),
+                ]);
+
+                return response()->json([
+                    'status' => true,
+                    'authorization_url' => $result['data']['authorization_url']
+                ]);
+
+            } catch (\Exception $e) {
+                Log::error('Payment Log Error: ' . $e->getMessage());
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Payment initialized but failed to log locally.'
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Could not initialize payment gateway. Please try again later.'
+        ], 500);
+    }
+
+    public function verifyPayment(Request $request, SaySwitchServices $saySwitch)
+    {
+        $reference = $request->query('reference');
+
+        if (!$reference) {
+            return response()->json(['status' => false, 'message' => 'No reference found'], 400);
+        }
+
+        $verification = $saySwitch->verifyTransaction($reference);
+
+        if ($verification && $verification['success'] && $verification['data']['status'] === 'success') {
+
+            $payment = Payment::where('reference', $reference)->first();
+
+            if ($payment && $payment->status !== 'paid') {
+                $payment->update([
+                    'status'           => 'paid',
+                    'payment_date'     => now(),
+                    'payment_method'   => $verification['data']['channel'] ?? 'card',
+                    'transaction_id'   => $verification['data']['reference'],
+                    'notes'            => 'Verification successful: ' . $verification['message']
+                ]);
+
+                // $payment->subscription->update(['status' => 'active']);
+
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Payment verified and recorded.',
+                    'data' => $payment
+                ]);
+            }
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Payment verification failed or was already processed.'
+        ], 400);
+    }
 }

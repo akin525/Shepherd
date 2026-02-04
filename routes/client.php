@@ -23,5 +23,8 @@ Route::group(['prefix' => 'client'], function () {
         Route::get('account-info', [ClientController::class, 'accountInfo']);
         Route::post('/submit-escalation', [ClientController::class, 'submitEscalation']);
         Route::get('/escalation-type', [ClientController::class, 'getEscalationTypes']);
+
+        Route::post('/initialize', [ClientController::class, 'makePayment']);
+        Route::get('/verify-transaction/{reference}', [ClientController::class, 'verifyPayment']);
     });
 });
