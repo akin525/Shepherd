@@ -19,6 +19,7 @@ class SaySwitchServices
     public function initializeTransaction(array $data)
     {
         try {
+            log::info("Initializing transaction", [$data]);
             $response = Http::withToken($this->token)
                 ->asMultipart()
                 ->post("{$this->baseUrl}/transaction/initialize", [
@@ -29,6 +30,7 @@ class SaySwitchServices
                     'callback_url' => $data['callback_url'],
                 ]);
 
+            log::info('Payment response', [$response]);
             if ($response->successful()) {
                 return $response->json();
             }
@@ -50,7 +52,7 @@ class SaySwitchServices
         try {
             $response = Http::withToken($this->token)
                 ->get("{$this->baseUrl}/transaction/verify/{$reference}");
-
+            log::info('Payment response', [$response]);
             if ($response->successful()) {
                 return $response->json();
             }
