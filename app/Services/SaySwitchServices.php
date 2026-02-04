@@ -49,7 +49,7 @@ class SaySwitchServices
     {
         try {
             $response = Http::withToken($this->token)
-                ->get("{$this->baseUrl}/{$reference}");
+                ->get("{$this->baseUrl}/transaction/verify/{$reference}");
 
             if ($response->successful()) {
                 return $response->json();

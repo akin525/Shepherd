@@ -48,4 +48,15 @@
       0 => 'Termwind\\Laravel\\TermwindServiceProvider',
     ),
   ),
+  'opcodesio/log-viewer' => 
+  array (
+    'aliases' => 
+    array (
+      'LogViewer' => 'Opcodes\\LogViewer\\Facades\\LogViewer',
+    ),
+    'providers' => 
+    array (
+      0 => 'Opcodes\\LogViewer\\LogViewerServiceProvider',
+    ),
+  ),
 );
