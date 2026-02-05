@@ -337,7 +337,6 @@ class ClientController extends Controller
     }
 
 
-
     public function dashboard(Request $request)
     {
         $user = $request->user();
@@ -365,7 +364,7 @@ class ClientController extends Controller
             ?? ($user->requested_plan ?? null);
 
         $validityStart = optional($activeSubscription)->start_date;
-        $validityEnd   = optional($activeSubscription)->end_date
+        $validityEnd = optional($activeSubscription)->end_date
             ?? ($user->plan_expire_dat ?? $user->plan_expire_date ?? null);
 
         $nextPaymentDate = optional($activeSubscription)->next_payment_date
@@ -384,11 +383,11 @@ class ClientController extends Controller
                 if ($status === 'payed') $status = 'paid';
 
                 return [
-                    'period'          => $row->period ?? $this->formatPeriod($row->start_date, $row->end_date),
-                    'service'         => $row->service ?? $row->service_name,
-                    'number_of_staff' => (int) ($row->staff_count ?? $row->number_of_staffs ?? 0),
-                    'equipments'      => (int) ($row->equipments ?? $row->equipment_count ?? 0),
-                    'status'          => $status, // 'pending' | 'paid'
+                    'period' => $row->period ?? $this->formatPeriod($row->start_date, $row->end_date),
+                    'service' => $row->service ?? $row->service_name,
+                    'number_of_staff' => (int)($row->staff_count ?? $row->number_of_staffs ?? 0),
+                    'equipments' => (int)($row->equipments ?? $row->equipment_count ?? 0),
+                    'status' => $status, // 'pending' | 'paid'
 //                    'download_url'    => route('subscriptions.download', ['id' => $row->id]),
                 ];
             });
@@ -404,11 +403,11 @@ class ClientController extends Controller
                 if ($status === 'payed') $status = 'paid';
 
                 return [
-                    'reference'       => (string) ($p->reference ?? $p->reference_no ?? $p->id),
-                    'service'         => $p->service ?? $p->service_name,
-                    'number_of_staff' => (int) ($p->staff_count ?? $p->number_of_staffs ?? 0),
-                    'status'          => $status, // 'pending' (orange) | 'deployed' (green) | 'paid' (green)
-                    'date'            => optional($p->created_at)->format('d, F Y'),
+                    'reference' => (string)($p->reference ?? $p->reference_no ?? $p->id),
+                    'service' => $p->service ?? $p->service_name,
+                    'number_of_staff' => (int)($p->staff_count ?? $p->number_of_staffs ?? 0),
+                    'status' => $status, // 'pending' (orange) | 'deployed' (green) | 'paid' (green)
+                    'date' => optional($p->created_at)->format('d, F Y'),
 //                    'download_url'    => route('payments.download', ['id' => $p->id]),
                 ];
             });
@@ -416,31 +415,30 @@ class ClientController extends Controller
         // Build response payload for the view
         $data = [
             // Header/UI meta
-            'company_name'        => $user->name,
+            'company_name' => $user->name,
 //            'welcome_title'       => 'Welcome Ann Hotets', // keep as per UI text
 //            'welcome_subtitle'    => 'Start with a clear overview of what matters most',
 
             // Summary cards
-            'active_staff'        => $activeStaffCount,
-            'total_payment'       => $totalPayments,
+            'active_staff' => $activeStaffCount,
+            'total_payment' => $totalPayments,
 
             // Subscriptions quick info
             'active_subscription' => $activePlanName, // e.g., "Man Guarding"
-            'validity_period'     => $this->formatValidity($validityStart, $validityEnd), // e.g., "Jan, 2026 - Feb, 2026"
-            'next_payment_date'   => optional($nextPaymentDate)->format('d M, Y') ?? null,
+            'validity_period' => $this->formatValidity($validityStart, $validityEnd), // e.g., "Jan, 2026 - Feb, 2026"
+            'next_payment_date' => optional($nextPaymentDate)->format('d M, Y') ?? null,
 
             // Tables
-            'subscription_rows'   => $subscriptionDetails,
-            'payment_rows'        => $payments,
+            'subscription_rows' => $subscriptionDetails,
+            'payment_rows' => $payments,
         ];
 
         return response()->json([
             'status' => true,
-                'data' => $data,
-                'message'=>'data retrieved successfully',
-            ]);
+            'data' => $data,
+            'message' => 'data retrieved successfully',
+        ]);
     }
-
 
 
     public function Subscriptionindex(Request $request)
@@ -449,8 +447,8 @@ class ClientController extends Controller
 
         // Optional filters: service category, status, period
         $service = $request->string('service')->trim();         // e.g., 'Security', 'Operations', 'Man Guarding'
-        $status  = $request->string('status')->trim();          // e.g., 'pending', 'paid'
-        $period  = $request->string('period')->trim();          // e.g., 'January - March'
+        $status = $request->string('status')->trim();          // e.g., 'pending', 'paid'
+        $period = $request->string('period')->trim();          // e.g., 'January - March'
 
         // Active plans count (active subscriptions)
         $activePlansCount = Subscription::query()
@@ -466,8 +464,8 @@ class ClientController extends Controller
             ->first();
 
         $validityStart = optional($activeSubscription)->start_date;
-        $validityEnd   = optional($activeSubscription)->end_date;
-        $nextPayment   = optional($activeSubscription)->next_payment_date;
+        $validityEnd = optional($activeSubscription)->end_date;
+        $nextPayment = optional($activeSubscription)->next_payment_date;
 
         // Build query for table rows (Subscription Items)
         $itemsQuery = SubscriptionItem::query()
@@ -497,13 +495,13 @@ class ClientController extends Controller
                 if ($status === 'payed') $status = 'paid'; // normalize
 
                 return [
-                    'id'              => $row->id,
-                    'period'          => $row->period ?: $this->formatPeriod($row->start_date, $row->end_date),
-                    'service'         => $row->service ?? $row->service_type,
-                    'number_of_staff' => (int) ($row->number_of_staffs ?? 0),
-                    'equipments'      => (int) ($row->equipments ?? 0),
-                    'status'          => $status, // 'pending' | 'paid'
-                    'status_dot'      => $status === 'pending' ? 'yellow' : 'green',
+                    'id' => $row->id,
+                    'period' => $row->period ?: $this->formatPeriod($row->start_date, $row->end_date),
+                    'service' => $row->service ?? $row->service_type,
+                    'number_of_staff' => (int)($row->number_of_staffs ?? 0),
+                    'equipments' => (int)($row->equipments ?? 0),
+                    'status' => $status, // 'pending' | 'paid'
+                    'status_dot' => $status === 'pending' ? 'yellow' : 'green',
 //                    'download_url'    => route('subscriptions.download', ['id' => $row->id]),
                 ];
             });
@@ -523,16 +521,16 @@ class ClientController extends Controller
         $data = [
             // Header cards
             'cards' => [
-                'active_plans'      => $activePlansCount,                             // e.g., 23
-                'validity_period'   => $this->formatValidity($validityStart, $validityEnd), // "Jan, 2026 - Feb, 2026"
+                'active_plans' => $activePlansCount,                             // e.g., 23
+                'validity_period' => $this->formatValidity($validityStart, $validityEnd), // "Jan, 2026 - Feb, 2026"
                 'next_payment_date' => $nextPayment ? Carbon::parse($nextPayment)->format('d M, Y') : null, // "24 Jan, 2026"
             ],
 
             // Filters and list
             'filters' => [
-                'service'            => $service->isNotEmpty() ? (string)$service : null,
-                'status'             => $status->isNotEmpty() ? (string)$status : null,
-                'period'             => $period->isNotEmpty() ? (string)$period : null,
+                'service' => $service->isNotEmpty() ? (string)$service : null,
+                'status' => $status->isNotEmpty() ? (string)$status : null,
+                'period' => $period->isNotEmpty() ? (string)$period : null,
                 'available_services' => $availableServices, // for showing filter chips (Security, Operations, Man Guarding)
             ],
 
@@ -544,7 +542,7 @@ class ClientController extends Controller
         return response()->json([
             'status' => true,
             'data' => $data,
-            'message'=>'data retrieved successfully',
+            'message' => 'data retrieved successfully',
         ]);
     }
 
@@ -553,17 +551,17 @@ class ClientController extends Controller
         $user = $request->user();
 
         // Filters
-        $search  = $request->string('q')->trim();
-        $type    = $request->string('type')->trim();      // 'Security', 'Operations', etc.
-        $status  = $request->string('status')->trim();    // 'pending', 'dispensed'/'paid' etc.
-        $from    = $request->date('from');                // YYYY-MM-DD
-        $to      = $request->date('to');                  // YYYY-MM-DD
+        $search = $request->string('q')->trim();
+        $type = $request->string('type')->trim();      // 'Security', 'Operations', etc.
+        $status = $request->string('status')->trim();    // 'pending', 'dispensed'/'paid' etc.
+        $from = $request->date('from');                // YYYY-MM-DD
+        $to = $request->date('to');                  // YYYY-MM-DD
 
         $query = Payment::query()
             ->where('user_id', $user->id);
 
         if ($search->isNotEmpty()) {
-            $q = (string) $search;
+            $q = (string)$search;
             $query->where(function ($sub) use ($q) {
                 $sub->where('reference', 'like', "%{$q}%")
                     ->orWhere('transaction_id', 'like', "%{$q}%");
@@ -619,14 +617,14 @@ class ClientController extends Controller
                 $paymentId = $p->reference ?? ('PAY-' . $p->id);
 
                 return [
-                    'id'               => $p->id,
-                    'payment_id'       => $paymentId,
-                    'amount'           => $amountStr,
-                    'type'             => $p->type ?? $p->service ?? '—',
-                    'staff'  => (int) ($p->number_of_funds ?? $p->staff_count ?? 0),
-                    'status'           => $status_label,
+                    'id' => $p->id,
+                    'payment_id' => $paymentId,
+                    'amount' => $amountStr,
+                    'type' => $p->type ?? $p->service ?? '—',
+                    'staff' => (int)($p->number_of_funds ?? $p->staff_count ?? 0),
+                    'status' => $status_label,
 //                    'status_dot'       => $status_dot,
-                    'date'             => Carbon::parse($p->payment_date ?? $p->created_at)->format('d, F Y'),
+                    'date' => Carbon::parse($p->payment_date ?? $p->created_at)->format('d, F Y'),
 //                    'invoice_url'      => route('payments.invoice', ['id' => $p->id]),
                 ];
             });
@@ -644,26 +642,26 @@ class ClientController extends Controller
         // Build payload for view
         $data = [
             'header' => [
-                'title'               => 'Payment History',
-                'total_amount'        => $this->formatMoney($totalAmount, $request->input('currency', 'NPR')),
-                'completion_percent'  => $completionPercent, // e.g., 30%
-                'active_tab'          => 'All Payments',
+                'title' => 'Payment History',
+                'total_amount' => $this->formatMoney($totalAmount, $request->input('currency', 'NPR')),
+                'completion_percent' => $completionPercent, // e.g., 30%
+                'active_tab' => 'All Payments',
             ],
             'filters' => [
-                'q'      => $search->isNotEmpty() ? (string)$search : null,
-                'type'   => $type->isNotEmpty() ? (string)$type : null,
+                'q' => $search->isNotEmpty() ? (string)$search : null,
+                'type' => $type->isNotEmpty() ? (string)$type : null,
                 'status' => $status->isNotEmpty() ? (string)$status : null,
-                'from'   => $from?->format('Y-m-d'),
-                'to'     => $to?->format('Y-m-d'),
+                'from' => $from?->format('Y-m-d'),
+                'to' => $to?->format('Y-m-d'),
             ],
             'rows' => $payments, // paginator with transformed rows
         ];
 
-      return response()->json([
-          'status'=>true,
-          'data'=>$data,
-          'message'=>'data retrieved successfully',
-      ]);
+        return response()->json([
+            'status' => true,
+            'data' => $data,
+            'message' => 'data retrieved successfully',
+        ]);
     }
 
     public function invoice(Request $request, int $id)
@@ -690,7 +688,7 @@ class ClientController extends Controller
         $perPage = $request->input('per_page', 20);
         $search = $request->input('search');
 
-       $query = ClientStaff::with('employee');
+        $query = ClientStaff::with('employee');
 
         if ($search) {
             $query->whereHas('employee', function ($q) use ($search) {
@@ -765,20 +763,20 @@ class ClientController extends Controller
                 'billing_cycle' => 'monthly',
                 'currency' => 'NGN',
                 'equipment_count' => 0,
-                'start_date' =>$request->start_date?? Carbon::now(),
-                'end_date' =>$request->end_date ?? Carbon::now()->addMonth(),
-                'next_payment_date'=>$request->end_date ?? Carbon::now()->addMonth(),
+                'start_date' => $request->start_date ?? Carbon::now(),
+                'end_date' => $request->end_date ?? Carbon::now()->addMonth(),
+                'next_payment_date' => $request->end_date ?? Carbon::now()->addMonth(),
                 'auto_renew' => 1
             ]);
 
-            $subscriptionItem=SubscriptionItem::create([
-                'subscription_id'=>$subscription->id,
-                'user_id'=>$user->id,
-                'start_date'=>$request->start_date ??Carbon::now(),
-                'end_date' =>$request->end_date?? Carbon::now()->addMonth(),
-                'service'=>$request->service,
-                'service_type'=>$request->service,
-                'number_of_staffs'=>$request->staff_count,
+            $subscriptionItem = SubscriptionItem::create([
+                'subscription_id' => $subscription->id,
+                'user_id' => $user->id,
+                'start_date' => $request->start_date ?? Carbon::now(),
+                'end_date' => $request->end_date ?? Carbon::now()->addMonth(),
+                'service' => $request->service,
+                'service_type' => $request->service,
+                'number_of_staffs' => $request->staff_count,
             ]);
             return response()->json([
                 'status' => true,
@@ -794,6 +792,7 @@ class ClientController extends Controller
             ], 500);
         }
     }
+
     public function changePassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -826,6 +825,7 @@ class ClientController extends Controller
             'message' => 'Password updated successfully'
         ], 200);
     }
+
     public function accountInfo()
     {
         $user = auth()->user();
@@ -914,16 +914,16 @@ class ClientController extends Controller
             }
 
             $complaint = Complaint::create([
-                'complaint_from'    => $user->id,
-                'client_id'         => $user->client->id ?? null,
+                'complaint_from' => $user->id,
+                'client_id' => $user->client->id ?? null,
                 'complaint_against' => $request->staff_identifier,
-                'title'             => $request->escalation_type,
-                'complaint_date'    => now()->format('Y-m-d'), // REQUIRED by your DB schema
-                'description'       => $request->message,
-                'attachment'        => $attachmentPath,
-                'status'            => 'pending',
-                'priority'          => 'medium',
-                'created_by'        => $user->name ?? 'System',
+                'title' => $request->escalation_type,
+                'complaint_date' => now()->format('Y-m-d'), // REQUIRED by your DB schema
+                'description' => $request->message,
+                'attachment' => $attachmentPath,
+                'status' => 'pending',
+                'priority' => 'medium',
+                'created_by' => $user->name ?? 'System',
             ]);
 
             return response()->json([
@@ -940,6 +940,7 @@ class ClientController extends Controller
             ], 500);
         }
     }
+
     public function getEscalationTypes()
     {
         $types = EscalationType::where('status', 1)->get(['id', 'name']);
@@ -965,7 +966,6 @@ class ClientController extends Controller
         if ($request->has('priority')) {
             $query->priority($request->priority);
         }
-
 
 
         if ($request->has('against')) {
@@ -1047,11 +1047,11 @@ class ClientController extends Controller
         $reference = 'SHEP-' . strtoupper(uniqid());
 
         $paymentData = [
-            'amount'       => $subscription->amount,
-            'email'        => $user->email,
-            'reference'    => $reference,
+            'amount' => $subscription->amount,
+            'email' => $user->email,
+            'reference' => $reference,
             'callback_url' => $request->callback_url,
-            'currency'     => 'NGN',
+            'currency' => 'NGN',
         ];
 
         $result = $saySwitch->initializeTransaction($paymentData);
@@ -1060,15 +1060,15 @@ class ClientController extends Controller
             try {
                 Payment::create([
                     'subscription_id' => $subscription->id,
-                    'user_id'         => $user->id,
-                    'reference'       => $reference,
-                    'transaction_id'  => $result['data']['access_code'] ?? null,
-                    'service'         => $subscription->name ?? 'Subscription Payment',
-                    'amount'          => $subscription->amount,
-                    'currency'        => 'NGN',
-                    'status'          => 'pending',
+                    'user_id' => $user->id,
+                    'reference' => $reference,
+                    'transaction_id' => $result['data']['access_code'] ?? null,
+                    'service' => $subscription->name ?? 'Subscription Payment',
+                    'amount' => $subscription->amount,
+                    'currency' => 'NGN',
+                    'status' => 'pending',
                     'payment_gateway' => 'SaySwitch',
-                    'notes'           => 'Initialization for ' . ($subscription->name ?? 'Service'),
+                    'notes' => 'Initialization for ' . ($subscription->name ?? 'Service'),
                 ]);
 
                 return response()->json([
@@ -1107,15 +1107,15 @@ class ClientController extends Controller
 
             if ($payment && $payment->status !== 'paid') {
                 $payment->update([
-                    'status'           => 'paid',
-                    'payment_date'     => now(),
-                    'payment_method'   => $verification['data']['channel'] ?? 'card',
-                    'transaction_id'   => $verification['data']['reference'],
-                    'notes'            => 'Verification successful: ' . $verification['message']
+                    'status' => 'paid',
+                    'payment_date' => now(),
+                    'payment_method' => $verification['data']['channel'] ?? 'card',
+                    'transaction_id' => $verification['data']['reference'],
+                    'notes' => 'Verification successful: ' . $verification['message']
                 ]);
 
-                 $payment->subscriptionItem->update(['status' => 'paid']);
-                 $payment->subscriptionItem->subscription->update(['status' => 'active']);
+                $payment->subscriptionItem->update(['status' => 'paid']);
+                $payment->subscriptionItem->subscription->update(['status' => 'active']);
 
                 return response()->json([
                     'status' => true,
@@ -1133,11 +1133,10 @@ class ClientController extends Controller
 
     public function addReview(Request $request)
     {
-
         $validator = Validator::make($request->all(), [
             'staff_id' => 'required|integer',
-            'star'     => 'required|integer|min:1|max:5',
-            'review'   => 'required|string|max:1000',
+            'star' => 'required|integer|min:1|max:5',
+            'review' => 'required|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -1149,16 +1148,19 @@ class ClientController extends Controller
         }
 
         try {
-            $staff = \App\Models\ClientStaff::find($request->staff_id)->with('employee');
-//             $employee = \App\Models\Employee::where('user_id', $request->staff_id)->first();
+            $staff = ClientStaff::with('employee')->find($request->staff_id);
 
-            $employee=$staff->employee();
-
-            if (!$employee) {
+            if (!$staff) {
                 return response()->json(['status' => false, 'message' => 'Staff not found'], 404);
             }
 
-            // 3. Update the record
+            $employee = $staff->employee;
+
+            if (!$employee) {
+                return response()->json(['status' => false, 'message' => 'Associated employee record not found'], 404);
+            }
+
+
             $employee->rating = $request->star;
             $employee->rating_comment = $request->review;
             $employee->save();
@@ -1175,4 +1177,5 @@ class ClientController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
-    }}
+    }
+}
