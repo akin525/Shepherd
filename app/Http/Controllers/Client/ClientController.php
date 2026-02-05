@@ -1133,9 +1133,11 @@ class ClientController extends Controller
 
     public function addReview(Request $request)
     {
-        $validator=Validator::make($request->all(), [
-            'star'=>'required|integer',
-            'review'=>'required|string',
+
+        $validator = Validator::make($request->all(), [
+            'staff_id' => 'required|integer',
+            'star'     => 'required|integer|min:1|max:5',
+            'review'   => 'required|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -1143,17 +1145,34 @@ class ClientController extends Controller
                 'status' => false,
                 'message' => 'Validation error',
                 'errors' => $validator->errors()
-            ]);
+            ], 422);
         }
-        $user = Auth::user();
-        $employee=$user->employee();
 
-        $employee->rating=$request->star;
-        $employee->rating_comment=$request->review;
-        $employee->save();
-        return response()->json([
-            'status' => true,
-            'message' => 'Review added successfully.',
-        ]);
-    }
-}
+        try {
+            $staff = \App\Models\ClientStaff::find($request->staff_id)->with('employee');
+//             $employee = \App\Models\Employee::where('user_id', $request->staff_id)->first();
+
+            $employee=$staff->employee();
+
+            if (!$employee) {
+                return response()->json(['status' => false, 'message' => 'Staff not found'], 404);
+            }
+
+            // 3. Update the record
+            $employee->rating = $request->star;
+            $employee->rating_comment = $request->review;
+            $employee->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Review added successfully.',
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to add review',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }}
