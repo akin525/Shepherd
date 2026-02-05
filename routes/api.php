@@ -3,6 +3,7 @@
 use App\Http\Controllers\Client\ClientAuthController;
 use App\Http\Controllers\Client\ClientController;
 use App\Http\Controllers\IssueController;
+use App\Http\Controllers\Operations\AssessmentController;
 use App\Http\Controllers\ResignationController;
 use App\Http\Controllers\TrainingController;
 use Illuminate\Http\Request;
@@ -117,6 +118,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/overtime-history', [AttendanceController::class, 'getOvertimeHistory']);
     Route::get('/overtime-charts', [AttendanceController::class, 'getOvertimeChartData']);
 
+
+
 });
 
 // Admin routes (requires admin role)
@@ -129,3 +132,4 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
 });
 
 require __DIR__ . '/client.php';
+require __DIR__ . '/operations.php';
