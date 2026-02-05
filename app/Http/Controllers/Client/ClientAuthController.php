@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -138,6 +139,107 @@ class ClientAuthController extends Controller
             'data' => [
                 'user' => $user->load('employee')
             ]
+        ]);
+    }
+
+    public function sendOtp(Request $request)
+    {
+        $user = Auth::user();
+
+        $otp = rand(1000, 9999);
+         $user->otp = $otp;
+        $user->save();
+
+        try {
+
+//            Mail::to($user->email)->send(new OtpMail($user, $otp));
+
+            return response()->json([
+                'status' => true,
+                'message' => 'OTP sent successfully to ' . $user->email,
+                'otp'=>$otp
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to send OTP email. Please try again.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Step 2: Verify OTP
+     */
+    public function verifyOtp(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'otp' => 'required|digits:4'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid OTP format',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = Auth::user();
+
+        if ($user->otp == $request->otp) {
+
+            $user->otp = null;
+            $user->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Identity verified successfully.'
+            ]);
+        }
+
+        return response()->json([
+            'status' => false,
+            'message' => 'Invalid or expired OTP.'
+        ], 400);
+    }
+
+    /**
+     * Step 3: Change Password
+     */
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required',
+            'new_password' => 'required|min:8|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = Auth::user();
+
+        // 1. Verify Current Password
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'The current password provided is incorrect.'
+            ], 400);
+        }
+
+        // 2. Update Password
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Password updated successfully.',
+            'statusCode' => 200 // Matching your frontend check
         ]);
     }
 }

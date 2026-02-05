@@ -30,5 +30,9 @@ Route::group(['prefix' => 'client'], function () {
 
         Route::post('/initialize', [ClientController::class, 'makePayment']);
         Route::get('/verify-transaction/{reference}', [ClientController::class, 'verifyPayment']);
+
+        Route::post('/send-otp', [ClientAuthController::class, 'sendOtp']);
+        Route::post('/verify-otp', [ClientAuthController::class, 'verifyOtp']);
+        Route::post('/change-password', [ClientAuthController::class, 'changePassword']);
     });
 });
