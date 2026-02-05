@@ -877,9 +877,6 @@ class ClientController extends Controller
         ) ?: 'N/A';
     }
 
-    /**
-     * Format validity period exactly like the UI "Jan, 2026 - Feb, 2026".
-     */
     protected function formatValidity($start, $end)
     {
         $s = $start ? \Carbon\Carbon::parse($start)->format('M, Y') : null;
@@ -950,6 +947,41 @@ class ClientController extends Controller
         return response()->json([
             'status' => true,
             'data' => $types
+        ]);
+    }
+
+    public function getEscalation(Request $request): JsonResponse
+    {
+        $query = Complaint::with(['client', 'against']);
+
+        $user = Auth::user();
+
+        // Filter by status
+        if ($request->has('status')) {
+            $query->status($request->status);
+        }
+
+        // Filter by priority
+        if ($request->has('priority')) {
+            $query->priority($request->priority);
+        }
+
+
+
+        if ($request->has('against')) {
+            $query->complaint_against($request->against);
+        }
+
+        if ($request->has('search')) {
+            $query->search($request->search);
+        }
+
+        $perPage = $request->get('per_page', 15);
+        $complaints = $query->latest()->paginate($perPage);
+
+        return response()->json([
+            'success' => true,
+            'data' => $complaints,
         ]);
     }
 
@@ -1097,5 +1129,31 @@ class ClientController extends Controller
             'status' => false,
             'message' => 'Payment verification failed or was already processed.'
         ], 400);
+    }
+
+    public function addReview(Request $request)
+    {
+        $validator=Validator::make($request->all(), [
+            'star'=>'required|integer',
+            'review'=>'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ]);
+        }
+        $user = Auth::user();
+        $employee=$user->employee();
+
+        $employee->rating=$request->star;
+        $employee->rating_comment=$request->review;
+        $employee->save();
+        return response()->json([
+            'status' => true,
+            'message' => 'Review added successfully.',
+        ]);
     }
 }

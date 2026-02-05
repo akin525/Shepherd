@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Complaint extends Model
@@ -24,4 +25,12 @@ class Complaint extends Model
     ];
 
 
+    public function client(): BelongsTo
+    {
+        return $this->belongsTo(Client::class, 'client_id');
+    }
+    public function against(): BelongsTo
+    {
+        return $this->belongsTo(ClientStaff::class, 'complaint_against');
+    }
 }

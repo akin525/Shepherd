@@ -19,9 +19,11 @@ Route::group(['prefix' => 'client'], function () {
         Route::get('/payment', [ClientController::class, 'paymentindex']);
         Route::get('/me', [ClientAuthController::class, 'me']);
         Route::get('/staff', [ClientController::class, 'staff']);
+        Route::post('/add-service', [ClientController::class, 'addReview']);
         Route::post('/change-password', [ClientController::class, 'changePassword']);
         Route::get('account-info', [ClientController::class, 'accountInfo']);
         Route::post('/submit-escalation', [ClientController::class, 'submitEscalation']);
+        Route::get('/all-escalations', [ClientController::class, 'getEscalation']);
         Route::get('/escalation-type', [ClientController::class, 'getEscalationTypes']);
 
         Route::post('/initialize', [ClientController::class, 'makePayment']);
