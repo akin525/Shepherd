@@ -26,6 +26,7 @@ Route::group(['prefix' => 'client'], function () {
         Route::get('/all-escalations', [ClientController::class, 'getEscalation']);
         Route::get('escalations/{id}', [ClientController::class, 'showEscalation']);
         Route::get('/escalation-type', [ClientController::class, 'getEscalationTypes']);
+        Route::post('escalations/{id}/reply', [ClientController::class, 'replyEscalation']);
 
         Route::post('/initialize', [ClientController::class, 'makePayment']);
         Route::get('/verify-transaction/{reference}', [ClientController::class, 'verifyPayment']);
