@@ -20,29 +20,24 @@ class AttendanceController extends Controller
     {
         $query = AttendanceEmployee::with(['employee', 'employee.department', 'employee.designation']);
 
-        // Filter by date range
         if ($request->has('start_date') && $request->has('end_date')) {
             $query->whereBetween('date', [$request->start_date, $request->end_date]);
         }
 
-        // Filter by employee
         if ($request->has('employee_id')) {
             $query->where('employee_id', $request->employee_id);
         }
 
-        // Filter by status
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
 
-        // Filter by department
         if ($request->has('department_id')) {
             $query->whereHas('employee', function ($q) use ($request) {
                 $q->where('department_id', $request->department_id);
             });
         }
 
-        // Filter by month/year
         if ($request->has('month')) {
             $query->whereMonth('date', $request->month);
         }
@@ -50,8 +45,39 @@ class AttendanceController extends Controller
             $query->whereYear('date', $request->year);
         }
 
+
         $attendances = $query->orderBy('date', 'desc')
-                            ->paginate($request->get('per_page', 20));
+            ->paginate($request->get('per_page', 20));
+
+
+        $attendances->getCollection()->transform(function ($attendance) {
+
+            $attendance->total_time = 'N/A';
+
+            if ($attendance->clock_in && $attendance->clock_out) {
+                try {
+
+                    $start = Carbon::parse($attendance->clock_in);
+                    $end = Carbon::parse($attendance->clock_out);
+
+
+                    $diff = $start->diff($end);
+
+                    $parts = [];
+                    if ($diff->h > 0) $parts[] = "{$diff->h}h";
+                    if ($diff->i > 0) $parts[] = "{$diff->i}m";
+                    $parts[] = "{$diff->s}s";
+
+                    $attendance->total_time = implode(' ', $parts);
+                } catch (\Exception $e) {
+
+                }
+            } elseif ($attendance->clock_in && !$attendance->clock_out) {
+                $attendance->total_time = 'Active';
+            }
+
+            return $attendance;
+        });
 
         return response()->json([
             'status' => true,
@@ -61,7 +87,6 @@ class AttendanceController extends Controller
             ]
         ]);
     }
-
     /**
      * Check in employee
      */
@@ -607,5 +632,116 @@ class AttendanceController extends Controller
         $minutes = round($averageMinutes % 60);
 
         return sprintf('%02d:%02d', $hours, $minutes);
+    }
+
+
+    public function requestOvertime(Request $request)
+    {
+
+        $validator = Validator::make($request->all(), [
+            'hours' => 'required|integer|min:1',
+            'validity_period' => 'required|string',
+            'reason' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = Auth::user();
+            $employee = $user->employee;
+
+            if (!$employee) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Employee profile not found for this user.'
+                ], 404);
+            }
+
+             $days = (int) filter_var($request->validity_period, FILTER_SANITIZE_NUMBER_INT);
+            if ($days <= 0) {
+                $days = 1;
+            }
+
+
+            $overtime = new \App\Models\Overtime();
+            $overtime->employee_id = $employee->id;
+            $overtime->title = $request->reason;
+            $overtime->hours = $request->hours;
+            $overtime->number_of_days = $days;
+            $overtime->rate = 0.0;
+            $overtime->type = $request->validity_period;
+            $overtime->status = 'pending';
+            $overtime->created_by = $user->id;
+            $overtime->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Overtime request submitted successfully.',
+                'data' => $overtime
+            ], 201);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to submit overtime request.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getOvertimeHistory(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $employee = $user->employee;
+
+            if (!$employee) {
+                return response()->json(['status' => false, 'message' => 'Employee record not found'], 404);
+            }
+
+            $query = \App\Models\Overtime::where('employee_id', $employee->id);
+
+            if ($request->has('status')) {
+                $query->where('status', $request->status);
+            }
+
+            if ($request->has('start_date') && $request->has('end_date')) {
+                $query->whereBetween('created_at', [$request->start_date, $request->end_date]);
+            }
+
+            $overtimes = $query->latest()
+                ->paginate($request->get('per_page', 10));
+
+            $overtimes->getCollection()->transform(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'date' => $item->created_at->format('d/m/y'),
+                    'validity_period' => $item->number_of_days . ' Day(s)',
+                    'hours' => $item->hours . ' Hours',
+                    'status' => ucfirst($item->status),
+                    'raw_status' => $item->status,
+                    'reason' => $item->title,
+                ];
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Overtime history retrieved successfully',
+                'data' => $overtimes
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to fetch overtime history',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

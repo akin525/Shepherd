@@ -113,6 +113,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard/stats', [EmployeeController::class, 'dashboardStats']);
 
 
+    Route::post('/request-overtime', [AttendanceController::class, 'requestOvertime']);
+    Route::get('/overtime-history', [AttendanceController::class, 'getOvertimeHistory']);
+
 });
 
 // Admin routes (requires admin role)
