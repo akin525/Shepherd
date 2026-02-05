@@ -18,7 +18,7 @@ class AnnouncementController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = Announcement::with(['createdBy', 'departments', 'designations']);
+        $query = Announcement::with(['createdBy']);
 
         // Filter by status
 //        if ($request->has('status')) {

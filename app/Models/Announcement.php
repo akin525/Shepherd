@@ -58,18 +58,18 @@ class Announcement extends Model
     /**
      * Get the departments for the announcement.
      */
-    public function departments(): BelongsToMany
-    {
-        return $this->belongsToMany(Department::class, 'announcement_departments');
-    }
+//    public function departments(): BelongsToMany
+//    {
+//        return $this->belongsToMany(Department::class, 'announcement_departments');
+//    }
 
     /**
      * Get the designations for the announcement.
      */
-    public function designations(): BelongsToMany
-    {
-        return $this->belongsToMany(Designation::class, 'announcement_designations');
-    }
+//    public function designations(): BelongsToMany
+//    {
+//        return $this->belongsToMany(Designation::class, 'announcement_designations');
+//    }
 
     /**
      * Get the employees for the announcement.
@@ -106,8 +106,8 @@ class Announcement extends Model
      */
     public function isCurrentlyActive(): bool
     {
-        return $this->status === 'Active' && 
-               $this->start_date->lessThanOrEqualTo(now()) && 
+        return $this->status === 'Active' &&
+               $this->start_date->lessThanOrEqualTo(now()) &&
                (!$this->end_date || $this->end_date->greaterThanOrEqualTo(now()));
     }
 
