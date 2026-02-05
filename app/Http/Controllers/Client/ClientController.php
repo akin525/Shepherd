@@ -954,9 +954,11 @@ class ClientController extends Controller
 
     public function getEscalation(Request $request): JsonResponse
     {
-        $query = Complaint::with(['client', 'against']);
-
         $user = Auth::user();
+
+        $query = Complaint::with(['client', 'against'])
+        ->where('client_id', $user->client->id);
+
 
         // Filter by status
         if ($request->has('status')) {
@@ -985,7 +987,44 @@ class ClientController extends Controller
             'data' => $complaints,
         ]);
     }
+// Fetch a single complaint with conversation history
+    public function showEscalation($id)
+    {
+        $complaint = Complaint::with(['replies.user', 'against'])
+            ->where('id', $id)
+            ->where('client_id', Auth::user()->client_id) // Security check
+            ->first();
 
+        if (!$complaint) {
+            return response()->json(['success' => false, 'message' => 'Escalation not found'], 404);
+        }
+
+        return response()->json(['success' => true, 'data' => $complaint]);
+    }
+
+    public function replyEscalation(Request $request, $id)
+    {
+        $request->validate([
+            'message' => 'required|string',
+            'attachment' => 'nullable|file|max:5120'
+        ]);
+
+        $complaint = Complaint::where('id', $id)
+            ->where('client_id', Auth::user()->client->id)
+            ->firstOrFail();
+
+        $path = $request->file('attachment') ? $request->file('attachment')->store('replies', 'public') : null;
+
+        $reply = $complaint->replies()->create([
+            'user_id' => Auth::id(),
+            'message' => $request->message,
+            'attachment' => $path
+        ]);
+
+        $complaint->touch();
+
+        return response()->json(['success' => true, 'message' => 'Reply sent', 'data' => $reply]);
+    }
     public function updateSecurity(Request $request)
     {
         $user = Auth::user();

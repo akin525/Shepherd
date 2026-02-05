@@ -33,4 +33,8 @@ class Complaint extends Model
     {
         return $this->belongsTo(ClientStaff::class, 'complaint_against');
     }
+
+    public function replies() {
+        return $this->hasMany(ComplaintReply::class);
+    }
 }

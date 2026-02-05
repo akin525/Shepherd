@@ -24,6 +24,7 @@ Route::group(['prefix' => 'client'], function () {
         Route::get('account-info', [ClientController::class, 'accountInfo']);
         Route::post('/submit-escalation', [ClientController::class, 'submitEscalation']);
         Route::get('/all-escalations', [ClientController::class, 'getEscalation']);
+        Route::get('escalations/{id}', [ClientController::class, 'showEscalation']);
         Route::get('/escalation-type', [ClientController::class, 'getEscalationTypes']);
 
         Route::post('/initialize', [ClientController::class, 'makePayment']);
