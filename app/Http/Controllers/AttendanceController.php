@@ -744,4 +744,80 @@ class AttendanceController extends Controller
             ], 500);
         }
     }
+
+    public function getOvertimeChartData(Request $request): JsonResponse
+    {
+        try {
+            $user = Auth::user();
+            $employee = $user->employee;
+
+            if (!$employee) {
+                return response()->json(['status' => false, 'message' => 'Employee not found'], 404);
+            }
+
+            $totalRequests = \App\Models\Overtime::where('employee_id', $employee->id)->count();
+
+            $stats = \App\Models\Overtime::where('employee_id', $employee->id)
+                ->select('status', DB::raw('count(*) as count'))
+                ->groupBy('status')
+                ->pluck('count', 'status')
+                ->toArray();
+
+            $approvedCount = $stats['approved'] ?? 0;
+            $deniedCount   = $stats['declined'] ?? 0;
+            $pendingCount  = $stats['pending'] ?? 0;
+
+            $percentages = [
+                'approved' => $totalRequests > 0 ? round(($approvedCount / $totalRequests) * 100) : 0,
+                'denied'   => $totalRequests > 0 ? round(($deniedCount / $totalRequests) * 100) : 0,
+                'in_review'=> $totalRequests > 0 ? round(($pendingCount / $totalRequests) * 100) : 0,
+            ];
+
+            $chartData = [];
+            $months = collect([]);
+
+
+            for ($i = 3; $i >= 0; $i--) {
+                $months->push(Carbon::now()->subMonths($i));
+            }
+
+            foreach ($months as $month) {
+                $monthName = $month->format('M'); // e.g., "Jan", "Feb"
+                $monthNum = $month->month;
+                $year = $month->year;
+
+                // Fetch counts for this specific month
+                $monthlyStats = \App\Models\Overtime::where('employee_id', $employee->id)
+                    ->whereMonth('created_at', $monthNum)
+                    ->whereYear('created_at', $year)
+                    ->select('status', DB::raw('count(*) as count'))
+                    ->groupBy('status')
+                    ->pluck('count', 'status')
+                    ->toArray();
+
+                $chartData[] = [
+                    'month'    => $monthName,
+                    'approved' => $monthlyStats['approved'] ?? 0,
+                    'denied'   => $monthlyStats['declined'] ?? 0,
+                    'pending'  => $monthlyStats['pending'] ?? 0,
+                ];
+            }
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Chart data retrieved successfully',
+                'data' => [
+                    'percentages' => $percentages,
+                    'chart' => $chartData
+                ]
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to fetch chart data',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }

@@ -44,7 +44,7 @@ class ProfileController extends Controller
                 'performance' => $this->getPerformanceStats($employee),
 
                 // Card 3: Documents
-                'documents' => $this->getDocuments($employee),
+                'documents' => $this->getDocuments($employee->documents),
             ]
         ]);
     }

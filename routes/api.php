@@ -115,6 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/request-overtime', [AttendanceController::class, 'requestOvertime']);
     Route::get('/overtime-history', [AttendanceController::class, 'getOvertimeHistory']);
+    Route::get('/overtime-charts', [AttendanceController::class, 'getOvertimeChartData']);
 
 });
 
