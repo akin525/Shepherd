@@ -954,7 +954,7 @@ class ClientController extends Controller
 
     public function getEscalation(Request $request): JsonResponse
     {
-        $user = Auth::user();
+        $user = $request->user();
 
         $query = Complaint::with(['client', 'against'])
         ->where('client_id', $user->client->id);
@@ -988,11 +988,12 @@ class ClientController extends Controller
         ]);
     }
 // Fetch a single complaint with conversation history
-    public function showEscalation($id)
+    public function showEscalation(Request $request,$id)
     {
+        $user=$request->user();
         $complaint = Complaint::with(['replies.user', 'against'])
             ->where('id', $id)
-            ->where('client_id', Auth::user()->client_id) // Security check
+            ->where('client_id', $user->client->id) // Security check
             ->first();
 
         if (!$complaint) {
