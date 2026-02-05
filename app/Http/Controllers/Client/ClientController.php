@@ -730,6 +730,7 @@ class ClientController extends Controller
                 'status' => $statusLabel,
 
                 'rating' => $employee->rating ?? null,
+                'existingReview'=>$employee->rating_comment ?? null,
                 'rating_formatted' => isset($item->rating) ? number_format($item->rating, 1) : 'No rating',
             ];
         });
