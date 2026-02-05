@@ -956,7 +956,7 @@ class ClientController extends Controller
     {
         $user = $request->user();
 
-        $query = Complaint::with(['client', 'against'])
+        $query = Complaint::with('client', 'against')
         ->where('client_id', $user->client->id);
 
 
