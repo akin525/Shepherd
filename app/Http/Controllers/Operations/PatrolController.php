@@ -50,7 +50,7 @@ class PatrolController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-            return response()->json(['status' => false, 'message' => 'Failed to fetch logs'], 500);
+            return response()->json(['status' => false, 'message' => 'Failed to fetch logs', 'error'=> $e->getMessage()], 500);
         }
     }
 
