@@ -28,7 +28,9 @@ class PatrolController extends Controller
                 ->paginate($request->get('per_page', 10));
 
             $logs->getCollection()->transform(function ($item) {
-                $dateTime = Carbon::parse($item->patrol_date . ' ' . $item->patrol_time);
+                // FIX: Parse date first, then force the time from the patrol_time column
+                $dateTime = \Carbon\Carbon::parse($item->patrol_date)
+                    ->setTimeFromTimeString($item->patrol_time);
 
                 return [
                     'id' => $item->id,
@@ -37,8 +39,7 @@ class PatrolController extends Controller
                     'location' => $item->location,
                     'patrol_area' => $item->patrol_area,
                     'observation' => \Illuminate\Support\Str::limit($item->observation, 40),
-                    'status' => ucfirst($item->status), // "Completed", "Escalated"
-                    // Helper to determine row color if needed
+                    'status' => ucfirst($item->status),
                     'is_escalated' => $item->status === 'escalated'
                 ];
             });
@@ -50,10 +51,13 @@ class PatrolController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-            return response()->json(['status' => false, 'message' => 'Failed to fetch logs', 'error'=> $e->getMessage()], 500);
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to fetch logs',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
-
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
