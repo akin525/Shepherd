@@ -137,12 +137,12 @@ class AttendanceController extends Controller
 
             $alreadyCheckedIn = $attendance && $attendance->clock_in !== '00:00:00';
 
-            if ($alreadyCheckedIn) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Already checked in today'
-                ], 400);
-            }
+//            if ($alreadyCheckedIn) {
+//                return response()->json([
+//                    'status' => false,
+//                    'message' => 'Already checked in today'
+//                ], 400);
+//            }
 
             // 2. HANDLE IMAGE UPLOAD
             $imagePath = null;
