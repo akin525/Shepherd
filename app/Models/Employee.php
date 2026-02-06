@@ -239,9 +239,15 @@ class Employee extends Model
     /**
      * Get the branch that belongs to the employee.
      */
-    public function branch(): BelongsTo
+    public function attendance()
     {
-        return $this->belongsTo(Branch::class, 'branch_id');
+        // Ensure 'employee_id' matches the column name in your attendance_employees table
+        return $this->hasMany(AttendanceEmployee::class, 'employee_id');
+    }
+
+    public function branch()
+    {
+        return $this->belongsTo(Branch::class);
     }
 
     /**
