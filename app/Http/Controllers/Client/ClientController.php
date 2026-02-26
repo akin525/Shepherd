@@ -728,7 +728,7 @@ class ClientController extends Controller
                 'resume_time' => $item->deployments->resumption_time ?? '--:--',
 
                 'status' => $statusLabel,
-
+                'created_at'=>$item->created_at,
                 'rating' => $employee->rating ?? null,
                 'existingReview'=>$employee->rating_comment ?? null,
                 'rating_formatted' => isset($item->rating) ? number_format($item->rating, 1) : 'No rating',
