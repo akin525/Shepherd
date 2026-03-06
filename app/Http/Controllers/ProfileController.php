@@ -32,7 +32,7 @@ class ProfileController extends Controller
             'employee.documents'
         ]);
 
-        $employee = $user->employee();
+        $employee = $request->user()->employee;
 
         return response()->json([
             'status' => true,
