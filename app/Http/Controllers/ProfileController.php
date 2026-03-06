@@ -58,7 +58,7 @@ class ProfileController extends Controller
             'name'          => $user->name,
             'email'         => $user->email,
             'phone'         => $employee->phone?? null,
-            'dob'           => $employee->dob ? $employee->dob->format('d/m/Y') : null,
+            'dob'           => $employee->dob ?? null,
             'address'       => $employee->address,
             'employee_id'   => $employee->id,
             'staff_type'    => $employee->staff_type,
