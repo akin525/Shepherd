@@ -167,50 +167,7 @@ class Employee extends Model
      *
      * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'dob' => 'date',
-            'date_of_joining' => 'date',
-            'date_of_leaving' => 'date',
-            'contract_start_date' => 'date',
-            'contract_end_date' => 'date',
-            'license_expiry_date' => 'date',
-            'last_appraisal_date' => 'date',
-            'next_appraisal_date' => 'date',
-            'insurance_expiry_date' => 'date',
-            'work_permit_expiry_date' => 'date',
-            'passport_expiry_date' => 'date',
-            'visa_expiry_date' => 'date',
-            'driving_license_expiry_date' => 'date',
-            'professional_license_expiry_date' => 'date',
-            'background_check_date' => 'date',
-            'reference_check_date' => 'date',
-            'nda_signed_date' => 'date',
-            'handbook_acknowledged_date' => 'date',
-            'safety_training_date' => 'date',
-            'it_policy_accepted_date' => 'date',
-            'security_clearance_expiry_date' => 'date',
-            'access_card_issued_date' => 'date',
-            'access_card_expiry_date' => 'date',
-            'parking_permit_expiry_date' => 'date',
-            'uniform_issued_date' => 'date',
-            'equipment_returned_date' => 'date',
-            'is_active' => 'boolean',
-            'document_collection_require' => 'boolean',
-            'id_expiry_notification' => 'boolean',
-            'document_expiry_notification' => 'boolean',
-            'is_driver' => 'boolean',
-            'is_security_guard' => 'boolean',
-            'training_completed' => 'boolean',
-            'overtime_eligible' => 'boolean',
-            'nda_signed' => 'boolean',
-            'handbook_acknowledged' => 'boolean',
-            'safety_training_completed' => 'boolean',
-            'it_policy_accepted' => 'boolean',
-            'salary' => 'decimal:2',
-        ];
-    }
+
 
     /**
      * Get the user that owns the employee.
