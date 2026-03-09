@@ -11,7 +11,7 @@ class EmployeeDeployment extends Model
     use HasFactory;
     protected $guarded = [];
 
-    protected $table = 'employee_deployments';
+    protected $table = 'client_staffs';
     public function employee(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'employee_id');
