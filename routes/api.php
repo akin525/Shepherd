@@ -119,6 +119,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/overtime-charts', [AttendanceController::class, 'getOvertimeChartData']);
 
 
+    Route::get('/audit-log', [\App\Http\Controllers\AuditLogController::class, 'index']);
 
 });
 
