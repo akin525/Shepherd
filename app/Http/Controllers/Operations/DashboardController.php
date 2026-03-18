@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operations;
 
 use App\Models\AttendanceEmployee;
+use App\Models\Client;
 use App\Models\Employee;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -119,7 +120,7 @@ class DashboardController
                 'View Dashboard',
                 'Failed to load dashboard: ' . $e->getMessage()
             );
-            
+
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to load dashboard',
@@ -231,12 +232,22 @@ class DashboardController
                 'Attendance Overview',
                 'Failed to fetch attendance data: ' . $e->getMessage()
             );
-            
+
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to fetch attendance data',
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    public function getAllClient(Request $request): JsonResponse
+    {
+        $data=Client::get();
+        return response()->json([
+            'status' => true,
+            'data' => $data
+        ]);
+
     }
 }

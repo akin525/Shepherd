@@ -16,6 +16,7 @@ Route::group(['prefix' => 'operations'], function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'getDashboardData']);
         Route::get('/attendance', [DashboardController::class, 'getAttendanceOverview']);
+        Route::get('/client', [DashboardController::class, 'getAllClient']);
 
         Route::post('/assessments', [AssessmentController::class, 'store']);
         Route::get('/assessments', [AssessmentController::class, 'index']);
