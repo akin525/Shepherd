@@ -12,7 +12,7 @@ class AuditLogService
      *
      * @param int|null $userId
      * @param string $userName
-     * @param string $userEmail
+     * @param string|null $userEmail
      * @param string $userRole
      * @param string $actionType
      * @param string $feature
@@ -26,7 +26,7 @@ class AuditLogService
     public static function log(
         ?int $userId,
         string $userName,
-        string $userEmail,
+        ?string $userEmail,
         string $userRole,
         string $actionType,
         string $feature,
