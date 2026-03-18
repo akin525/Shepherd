@@ -69,7 +69,7 @@ class AssessmentController extends Controller
                 'View list',
                 'Failed to fetch assessments: ' . $e->getMessage()
             );
-            
+
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to fetch assessments',
@@ -144,7 +144,7 @@ class AssessmentController extends Controller
                 'View details',
                 "Failed to load assessment {$id}: " . $e->getMessage()
             );
-            
+
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to load details',
@@ -155,11 +155,13 @@ class AssessmentController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-
         $validator = Validator::make($request->all(), [
             'client_id' => 'required|exists:users,id',
             'site_address' => 'required|string|max:255',
             'facility_type' => 'required|string|max:255',
+            // Require exact coordinates
+            'latitude' => 'required|numeric|between:-90,90',
+            'longitude' => 'required|numeric|between:-180,180',
             'assessment_date' => 'nullable|date',
             'guard_requirements' => 'nullable|string',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:5120',
@@ -180,16 +182,16 @@ class AssessmentController extends Controller
                 $attachmentPath = $request->file('photo')->store('assessments', 'public');
             }
 
-
             $requestId = 'ASMT-' . date('Y') . '-' . rand(1000, 9999);
-
 
             $assessment = \App\Models\SiteAssessment::create([
                 'request_id' => $requestId,
                 'client_id' => $request->client_id,
                 'site_name' => 'Site at ' . Str::limit($request->site_address, 20),
                 'site_address' => $request->site_address,
-                'location' => 'Lagos',
+                'location' => $request->input('location', 'Lagos'),
+                'latitude' => $request->latitude,   // Saving coordinates
+                'longitude' => $request->longitude, // Saving coordinates
                 'facility_type' => $request->facility_type,
                 'assessment_date' => $request->assessment_date,
                 'guard_requirement_description' => $request->guard_requirements,
@@ -197,12 +199,12 @@ class AssessmentController extends Controller
                 'status' => 'pending'
             ]);
 
-            // Log assessment creation
+            // Log assessment creation with coordinates included
             AuditLogService::logCreate(
                 Auth::user(),
                 'Site Assessment',
                 $requestId,
-                "Site assessment requested for {$request->facility_type} at {$request->site_address}",
+                "Site assessment requested for {$request->facility_type} at {$request->site_address} (Lat: {$request->latitude}, Lng: {$request->longitude})",
                 $assessment->toArray()
             );
 
@@ -220,7 +222,7 @@ class AssessmentController extends Controller
                 'Create assessment',
                 'Failed to save assessment: ' . $e->getMessage()
             );
-            
+
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to save assessment',

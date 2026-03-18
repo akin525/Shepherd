@@ -18,6 +18,8 @@ class SiteAssessment extends Model
         'site_name',
         'site_address',
         'location',
+        'latitude',
+        'longitude',
         'facility_type',
         'assessment_date',
         'assessment_time',
