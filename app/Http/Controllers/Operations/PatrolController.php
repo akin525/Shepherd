@@ -63,14 +63,16 @@ class PatrolController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'guard_name' => 'required|string',
+            'guards_on_site' => 'required|json',
+            'essential_items' => 'required|json',
+
             'location' => 'required|string',
             'patrol_area' => 'required|string',
             'patrol_date' => 'required|date',
             'patrol_time' => 'required',
             'observation' => 'required|string',
             'incident_found' => 'required|boolean',
-            'incident_description' => 'nullable|required_if:incident_found,true|string',
+            'incident_description' => 'nullable|required_if:incident_found,1,true|string',
             'evidence.*' => 'nullable|file|mimes:jpg,jpeg,png,mp4,mov|max:20480',
         ]);
 
@@ -88,8 +90,13 @@ class PatrolController extends Controller
 
             $status = $request->boolean('incident_found') ? 'escalated' : 'completed';
 
+            // Decode the essential items so Laravel can cast it to JSON in the database
+            $essentialItems = json_decode($request->essential_items, true);
+
             $log = PatrolLog::create([
-                'guard_name' => $request->guard_name,
+                // Map the new dynamic guards array directly to your existing column
+                'guard_name' => $request->guards_on_site,
+                'essential_items' => $essentialItems, // New Column
                 'location' => $request->location,
                 'patrol_area' => $request->patrol_area,
                 'patrol_date' => $request->patrol_date,
@@ -103,7 +110,7 @@ class PatrolController extends Controller
 
             // Log patrol report
             AuditLogService::logCreate(
-                Auth::user(),
+                $request->user(),
                 'Patrol',
                 "{$request->location} - {$request->patrol_area}",
                 "Patrol report submitted for {$request->location}, area: {$request->patrol_area}, status: {$status}",
@@ -118,7 +125,7 @@ class PatrolController extends Controller
 
         } catch (\Throwable $e) {
             AuditLogService::logFailure(
-                Auth::user(),
+                $request->user(),
                 'Created',
                 'Patrol',
                 $request->location ?? 'Unknown',
