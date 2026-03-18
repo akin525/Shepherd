@@ -11,6 +11,7 @@ use App\Models\Announcement;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
+use App\Services\AuditLogService;
 
 class DashboardController extends Controller
 {
@@ -67,10 +68,18 @@ class DashboardController extends Controller
             ],
         ];
 
+        // Log dashboard statistics view
+        AuditLogService::logView(
+            $user,
+            'Client Dashboard',
+            'Statistics',
+            "Viewed dashboard statistics for client {$client->name}"
+        );
+
         return response()->json([
             'success' => true,
             'data' => $stats,
-        ]);
+        ])
     }
 
     /**
@@ -163,6 +172,14 @@ class DashboardController extends Controller
             ->take($limit)
             ->values();
 
+        // Log recent activities view
+        AuditLogService::logView(
+            $user,
+            'Client Dashboard',
+            'Recent Activities',
+            "Viewed recent activities for client {$client->name}"
+        );
+
         return response()->json([
             'success' => true,
             'data' => $activities,
@@ -192,6 +209,14 @@ class DashboardController extends Controller
 
         $perPage = $request->get('per_page', 15);
         $announcements = $query->paginate($perPage);
+
+        // Log announcements view
+        AuditLogService::logView(
+            $user,
+            'Client Dashboard',
+            'Announcements',
+            "Viewed announcements"
+        );
 
         return response()->json([
             'success' => true,
@@ -271,6 +296,14 @@ class DashboardController extends Controller
         // Merge events
         $events = $tickets->merge($complaints)->values();
 
+        // Log calendar events view
+        AuditLogService::logView(
+            $user,
+            'Client Dashboard',
+            'Calendar Events',
+            "Viewed calendar events for client {$client->name}"
+        );
+
         return response()->json([
             'success' => true,
             'data' => $events,
@@ -348,6 +381,14 @@ class DashboardController extends Controller
             ->take($limit)
             ->values();
 
+        // Log notifications view
+        AuditLogService::logView(
+            $user,
+            'Client Dashboard',
+            'Notifications',
+            "Viewed notifications for client {$client->name}"
+        );
+
         return response()->json([
             'success' => true,
             'data' => $notifications,
@@ -398,6 +439,14 @@ class DashboardController extends Controller
                 'color' => 'secondary',
             ],
         ];
+
+        // Log quick actions view
+        AuditLogService::logView(
+            $user,
+            'Client Dashboard',
+            'Quick Actions',
+            "Viewed quick actions menu"
+        );
 
         return response()->json([
             'success' => true,

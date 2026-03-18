@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Ticket;
 use App\Models\TicketReply;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -106,6 +107,15 @@ class TicketController extends Controller
 
             DB::commit();
 
+            // Log ticket creation
+            AuditLogService::logCreate(
+                $user,
+                'Ticket',
+                $validated['subject'],
+                "Ticket created: {$validated['subject']} with priority {$validated['priority']}",
+                $ticket->toArray()
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ticket created successfully',
@@ -113,6 +123,15 @@ class TicketController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            AuditLogService::logFailure(
+                $user,
+                'Created',
+                'Ticket',
+                $validated['subject'] ?? 'Unknown',
+                "Failed to create ticket: {$e->getMessage()}"
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create ticket',
@@ -151,6 +170,14 @@ class TicketController extends Controller
 
         $ticket->load(['client', 'assignedUser', 'creator', 'replies.user']);
 
+        // Log ticket view
+        AuditLogService::logView(
+            $user,
+            'Ticket',
+            $ticket->subject,
+            "Viewed ticket details: {$ticket->subject}"
+        );
+
         return response()->json([
             'success' => true,
             'data' => $ticket,
@@ -179,9 +206,20 @@ class TicketController extends Controller
             'category' => 'nullable|string|max:255',
         ]);
 
+        $oldValues = $ticket->toArray();
         $validated['updated_by'] = $user->id;
 
         $ticket->update($validated);
+
+        // Log ticket update
+        AuditLogService::logUpdate(
+            $user,
+            'Ticket',
+            $ticket->subject,
+            "Ticket updated: {$ticket->subject}",
+            $oldValues,
+            $ticket->toArray()
+        );
 
         return response()->json([
             'success' => true,
@@ -206,13 +244,32 @@ class TicketController extends Controller
         }
 
         try {
+            $subject = $ticket->subject;
+            $ticketData = $ticket->toArray();
             $ticket->delete();
+
+            // Log ticket deletion
+            AuditLogService::logDelete(
+                $user,
+                'Ticket',
+                $subject,
+                "Ticket deleted: {$subject}",
+                $ticketData
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Ticket deleted successfully',
             ]);
         } catch (\Exception $e) {
+            AuditLogService::logFailure(
+                $user,
+                'Deleted',
+                'Ticket',
+                $ticket->subject,
+                "Failed to delete ticket: {$e->getMessage()}"
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete ticket',
@@ -239,10 +296,21 @@ class TicketController extends Controller
             'assigned_to' => 'required|exists:users,id',
         ]);
 
+        $oldAssigned = $ticket->assignedUser->name ?? 'Unassigned';
         $ticket->update([
             'assigned_to' => $validated['assigned_to'],
             'updated_by' => $user->id,
         ]);
+
+        // Log ticket assignment
+        AuditLogService::logUpdate(
+            $user,
+            'Ticket',
+            $ticket->subject,
+            "Ticket assigned from {$oldAssigned} to user ID {$validated['assigned_to']}",
+            ['assigned_to' => $oldAssigned],
+            ['assigned_to' => $validated['assigned_to']]
+        );
 
         return response()->json([
             'success' => true,

@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Operations;
 
 use App\Http\Controllers\Controller;
 use App\Models\PatrolLog;
+use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class PatrolController extends Controller
@@ -99,6 +101,15 @@ class PatrolController extends Controller
                 'status' => $status
             ]);
 
+            // Log patrol report
+            AuditLogService::logCreate(
+                Auth::user(),
+                'Patrol',
+                "{$request->location} - {$request->patrol_area}",
+                "Patrol report submitted for {$request->location}, area: {$request->patrol_area}, status: {$status}",
+                $log->toArray()
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Patrol report submitted successfully',
@@ -106,6 +117,14 @@ class PatrolController extends Controller
             ], 201);
 
         } catch (\Throwable $e) {
+            AuditLogService::logFailure(
+                Auth::user(),
+                'Created',
+                'Patrol',
+                $request->location ?? 'Unknown',
+                "Failed to submit patrol report: {$e->getMessage()}"
+            );
+
             return response()->json(['status' => false, 'message' => 'Failed to submit report', 'error' => $e->getMessage()], 500);
         }
     }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Employee;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -37,6 +38,15 @@ class ClientAuthController extends Controller
             ->first();
 
         if (! $user || ! Hash::check($request->password, $user->password)) {
+            // Log failed login attempt
+            AuditLogService::logFailure(
+                null,
+                'Logged',
+                'Authentication',
+                'Client Login',
+                "Failed client login attempt for email: {$request->email}"
+            );
+
             return response()->json([
                 'status' => false,
                 'message' => 'The provided credentials are incorrect.'
@@ -51,6 +61,12 @@ class ClientAuthController extends Controller
 
         // Load user with employee information
         $user->load('employee');
+
+        // Log successful login
+        AuditLogService::logLogin(
+            $user,
+            "Client logged in from device: {$request->device_name}"
+        );
 
         return response()->json([
             'status' => true,
@@ -68,8 +84,16 @@ class ClientAuthController extends Controller
      */
     public function logout(Request $request)
     {
+        $user = $request->user();
+        
+        // Log logout action
+        AuditLogService::logLogout(
+            $user,
+            "Client logged out"
+        );
+
         // Revoke the token that was used to authenticate the current request
-        $request->user()->currentAccessToken()->delete();
+        $user->currentAccessToken()->delete();
 
         return response()->json([
             'status' => true,
@@ -117,6 +141,8 @@ class ClientAuthController extends Controller
             ], 422);
         }
 
+        $oldValues = $user->toArray();
+
         // Update user
         $user->update([
             'name' => $request->name,
@@ -132,6 +158,16 @@ class ClientAuthController extends Controller
                 'address' => $request->address,
             ]);
         }
+
+        // Log profile update
+        AuditLogService::logUpdate(
+            $user,
+            'Client Profile',
+            $user->name,
+            "Client profile updated: {$user->name}",
+            $oldValues,
+            $user->toArray()
+        );
 
         return response()->json([
             'status' => true,
@@ -150,6 +186,15 @@ class ClientAuthController extends Controller
          $user->otp = $otp;
         $user->save();
 
+        // Log OTP sent
+        AuditLogService::logCreate(
+            $user,
+            'Authentication',
+            'OTP',
+            "OTP sent to {$user->email}",
+            ['email' => $user->email]
+        );
+
         try {
 
 //            Mail::to($user->email)->send(new OtpMail($user, $otp));
@@ -160,6 +205,14 @@ class ClientAuthController extends Controller
                 'otp'=>$otp
             ]);
         } catch (\Exception $e) {
+            AuditLogService::logFailure(
+                $user,
+                'Created',
+                'Authentication',
+                'OTP',
+                "Failed to send OTP to {$user->email}: {$e->getMessage()}"
+            );
+
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to send OTP email. Please try again.',
@@ -192,11 +245,28 @@ class ClientAuthController extends Controller
             $user->otp = null;
             $user->save();
 
+            // Log successful OTP verification
+            AuditLogService::logView(
+                $user,
+                'Authentication',
+                'OTP Verification',
+                "OTP verified successfully for {$user->email}"
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Identity verified successfully.'
             ]);
         }
+
+        // Log failed OTP verification
+        AuditLogService::logFailure(
+            $user,
+            'Viewed',
+            'Authentication',
+            'OTP Verification',
+            "Failed OTP verification attempt for {$user->email}"
+        );
 
         return response()->json([
             'status' => false,
@@ -226,6 +296,14 @@ class ClientAuthController extends Controller
 
         // 1. Verify Current Password
         if (!Hash::check($request->current_password, $user->password)) {
+            AuditLogService::logFailure(
+                $user,
+                'Updated',
+                'Authentication',
+                'Password',
+                "Failed password change attempt for {$user->email} - incorrect current password"
+            );
+
             return response()->json([
                 'status' => false,
                 'message' => 'The current password provided is incorrect.'
@@ -235,6 +313,16 @@ class ClientAuthController extends Controller
         // 2. Update Password
         $user->password = Hash::make($request->new_password);
         $user->save();
+
+        // Log password change
+        AuditLogService::logUpdate(
+            $user,
+            'Authentication',
+            'Password',
+            "Password changed for {$user->name}",
+            null,
+            ['email' => $user->email]
+        );
 
         return response()->json([
             'status' => true,

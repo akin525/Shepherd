@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Operations;
 use App\Http\Controllers\Controller;
 use App\Models\ManningStructure;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
@@ -80,6 +82,15 @@ class ManningStructureController extends Controller
                 'shift_setup' => $request->shift_setup ?? $defaultShiftSetup
             ]);
 
+            // Log creation
+            AuditLogService::logCreate(
+                Auth::user(),
+                'Manning Structure',
+                "{$request->client_name} - {$request->location}",
+                "Manning structure created for {$request->client_name} at {$request->location} with {$request->total_guards} guards",
+                $structure->toArray()
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Manning structure created successfully',
@@ -87,6 +98,15 @@ class ManningStructureController extends Controller
             ], 201);
 
         } catch (\Throwable $e) {
+            // Log failure
+            AuditLogService::logFailure(
+                Auth::user(),
+                'Created',
+                'Manning Structure',
+                $request->client_name ?? 'Unknown',
+                "Failed to create manning structure: {$e->getMessage()}"
+            );
+
             return response()->json(['status' => false, 'message' => 'Failed to create structure', 'error' => $e->getMessage()], 500);
         }
     }
@@ -100,6 +120,14 @@ class ManningStructureController extends Controller
             if (!$structure) {
                 return response()->json(['status' => false, 'message' => 'Structure not found'], 404);
             }
+
+            // Log view action
+            AuditLogService::logView(
+                Auth::user(),
+                'Manning Structure',
+                "{$structure->client_name} - {$structure->location}",
+                "Viewed manning structure details for {$structure->client_name} at {$structure->location}"
+            );
 
             return response()->json([
                 'status' => true,

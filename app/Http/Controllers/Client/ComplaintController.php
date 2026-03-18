@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Services\AuditLogService;
 
 class ComplaintController extends Controller
 {
@@ -17,63 +18,51 @@ class ComplaintController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $user = $request->user();
+
         $query = Complaint::with(['client', 'assignedUser', 'creator']);
 
-        // Filter by client if not admin
-        $user = Auth::user();
-        if (!$user->isAdmin()) {
+        // 1. Role-based access control
+        if (! $user->isAdmin()) {
             if ($user->isClient()) {
                 // Client can only see their own complaints
-                $query->whereHas('client', function ($q) use ($user) {
-                    $q->where('user_id', $user->id);
-                });
+                $query->whereHas('client', fn ($q) => $q->where('user_id', $user->id));
             } else {
                 // Employee can only see complaints assigned to them
                 $query->assignedTo($user->id);
             }
         }
 
-        // Filter by status
-        if ($request->has('status')) {
-            $query->status($request->status);
-        }
+        $query->when($request->filled('status'), fn ($q) => $q->status($request->input('status')))
+            ->when($request->filled('priority'), fn ($q) => $q->priority($request->input('priority')))
+            ->when($request->filled('category'), fn ($q) => $q->category($request->input('category')))
+            ->when($request->filled('search'), fn ($q) => $q->search($request->input('search')))
+            ->when($user->isAdmin() && $request->filled('assigned_to'), fn ($q) => $q->assignedTo($request->input('assigned_to')));
 
-        // Filter by priority
-        if ($request->has('priority')) {
-            $query->priority($request->priority);
-        }
+        $complaints = $query->latest()->paginate($request->input('per_page', 15));
 
-        // Filter by category
-        if ($request->has('category')) {
-            $query->category($request->category);
-        }
+        $statusLog = $request->input('status', 'all');
+        $priorityLog = $request->input('priority', 'all');
 
-        // Filter by assigned user (admin only)
-        if ($request->has('assigned_to') && $user->isAdmin()) {
-            $query->assignedTo($request->assigned_to);
-        }
-
-        // Search
-        if ($request->has('search')) {
-            $query->search($request->search);
-        }
-
-        $perPage = $request->get('per_page', 15);
-        $complaints = $query->latest()->paginate($perPage);
+        AuditLogService::logView(
+            $user,
+            'Complaint',
+            'List view',
+            "Viewed complaints list with filters: status={$statusLog}, priority={$priorityLog}"
+        );
 
         return response()->json([
             'success' => true,
             'data' => $complaints,
         ]);
     }
-
     /**
      * Store a newly created complaint.
      */
     public function store(Request $request): JsonResponse
     {
         $user = Auth::user();
-        
+
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
             'title' => 'required|string|max:255',
@@ -105,6 +94,15 @@ class ComplaintController extends Controller
 
             DB::commit();
 
+            // Log complaint creation
+            AuditLogService::logCreate(
+                $user,
+                'Complaint',
+                $complaint->id,
+                "Complaint created: {$validated['title']} (Priority: {$validated['priority']})",
+                $complaint->toArray()
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Complaint created successfully',
@@ -112,6 +110,15 @@ class ComplaintController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
+            // Log failure
+            AuditLogService::logFailure(
+                $user,
+                'Complaint',
+                'Create complaint',
+                'Failed to create complaint: ' . $e->getMessage()
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create complaint',
@@ -150,6 +157,14 @@ class ComplaintController extends Controller
 
         $complaint->load(['client', 'assignedUser', 'creator']);
 
+        // Log view action
+        AuditLogService::logView(
+            $user,
+            'Complaint',
+            $complaint->id,
+            "Viewed complaint details: {$complaint->title}"
+        );
+
         return response()->json([
             'success' => true,
             'data' => $complaint,
@@ -178,9 +193,20 @@ class ComplaintController extends Controller
             'priority' => 'sometimes|enum:low,medium,high,urgent',
         ]);
 
+        $oldValues = $complaint->toArray();
         $validated['updated_by'] = $user->id;
 
         $complaint->update($validated);
+
+        // Log update action
+        AuditLogService::logUpdate(
+            $user,
+            'Complaint',
+            $complaint->id,
+            "Complaint updated: {$complaint->title}",
+            $oldValues,
+            $complaint->toArray()
+        );
 
         return response()->json([
             'success' => true,
@@ -205,13 +231,31 @@ class ComplaintController extends Controller
         }
 
         try {
+            $complaintData = $complaint->toArray();
             $complaint->delete();
+
+            // Log deletion
+            AuditLogService::logDelete(
+                $user,
+                'Complaint',
+                $complaint->id,
+                "Complaint deleted: {$complaint->title}",
+                $complaintData
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Complaint deleted successfully',
             ]);
         } catch (\Exception $e) {
+            // Log failure
+            AuditLogService::logFailure(
+                $user,
+                'Complaint',
+                'Delete complaint',
+                'Failed to delete complaint: ' . $e->getMessage()
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete complaint',
@@ -238,10 +282,22 @@ class ComplaintController extends Controller
             'assigned_to' => 'required|exists:users,id',
         ]);
 
+        $oldAssignedTo = $complaint->assigned_to;
+
         $complaint->update([
             'assigned_to' => $validated['assigned_to'],
             'updated_by' => $user->id,
         ]);
+
+        // Log assignment
+        AuditLogService::logUpdate(
+            $user,
+            'Complaint',
+            $complaint->id,
+            "Complaint assigned from user ID {$oldAssignedTo} to user ID {$validated['assigned_to']}",
+            ['assigned_to' => $oldAssignedTo],
+            ['assigned_to' => $validated['assigned_to']]
+        );
 
         return response()->json([
             'success' => true,
@@ -270,6 +326,7 @@ class ComplaintController extends Controller
             ], 403);
         }
 
+        $oldStatus = $complaint->status;
         $validated['updated_by'] = $user->id;
 
         if ($validated['status'] === Complaint::STATUS_RESOLVED) {
@@ -280,11 +337,21 @@ class ComplaintController extends Controller
             $complaint->update($validated);
         }
 
+        // Log status update
+        AuditLogService::logUpdate(
+            $user,
+            'Complaint',
+            $complaint->id,
+            "Complaint status changed from {$oldStatus} to {$validated['status']}",
+            ['status' => $oldStatus],
+            ['status' => $validated['status']]
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Complaint status updated successfully',
             'data' => $complaint->load(['client', 'assignedUser']),
-        ]);
+        ])
     }
 
     /**
@@ -317,6 +384,15 @@ class ComplaintController extends Controller
 
         $complaint->addFeedback($validated['rating'], $validated['comments']);
 
+        // Log feedback
+        AuditLogService::logCreate(
+            $user,
+            'Complaint Feedback',
+            $complaint->id,
+            "Feedback added for complaint {$complaint->id}: Rating {$validated['rating']}",
+            ['rating' => $validated['rating'], 'comments' => $validated['comments']]
+        );
+
         return response()->json([
             'success' => true,
             'message' => 'Feedback added successfully',
@@ -330,9 +406,9 @@ class ComplaintController extends Controller
     public function statistics(): JsonResponse
     {
         $user = Auth::user();
-        
+
         $query = Complaint::query();
-        
+
         // Filter based on user role
         if (!$user->isAdmin()) {
             if ($user->isClient()) {
@@ -357,6 +433,14 @@ class ComplaintController extends Controller
             $stats['with_feedback'] = $query->whereNotNull('feedback_rating')->count();
             $stats['avg_rating'] = $query->whereNotNull('feedback_rating')->avg('feedback_rating') ?? 0;
         }
+
+        // Log statistics view
+        AuditLogService::logView(
+            $user,
+            'Complaint Statistics',
+            'Dashboard',
+            "Viewed complaint statistics for {$user->role}"
+        );
 
         return response()->json([
             'success' => true,

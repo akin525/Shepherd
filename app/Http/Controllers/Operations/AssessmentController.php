@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\SiteAssessment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use App\Services\AuditLogService;
 
 class AssessmentController extends Controller
 {
@@ -45,6 +47,14 @@ class AssessmentController extends Controller
                 ];
             });
 
+            // Log view action
+            AuditLogService::logView(
+                Auth::user(),
+                'Site Assessment',
+                'List view',
+                "Viewed assessments list with filters: " . ($request->search ? "search={$request->search}" : 'none')
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Assessment requests retrieved successfully',
@@ -52,6 +62,14 @@ class AssessmentController extends Controller
             ]);
 
         } catch (\Throwable $e) {
+            // Log failure
+            AuditLogService::logFailure(
+                Auth::user(),
+                'Site Assessment',
+                'View list',
+                'Failed to fetch assessments: ' . $e->getMessage()
+            );
+            
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to fetch assessments',
@@ -104,6 +122,14 @@ class AssessmentController extends Controller
                     : json_decode($assessment->general_observations, true) ?? [],
             ];
 
+            // Log view action
+            AuditLogService::logView(
+                Auth::user(),
+                'Site Assessment',
+                $assessment->request_id,
+                "Viewed assessment details for {$assessment->client->name} at {$assessment->site_name}"
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Assessment details retrieved successfully',
@@ -111,6 +137,14 @@ class AssessmentController extends Controller
             ]);
 
         } catch (\Throwable $e) {
+            // Log failure
+            AuditLogService::logFailure(
+                Auth::user(),
+                'Site Assessment',
+                'View details',
+                "Failed to load assessment {$id}: " . $e->getMessage()
+            );
+            
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to load details',
@@ -163,6 +197,15 @@ class AssessmentController extends Controller
                 'status' => 'pending'
             ]);
 
+            // Log assessment creation
+            AuditLogService::logCreate(
+                Auth::user(),
+                'Site Assessment',
+                $requestId,
+                "Site assessment requested for {$request->facility_type} at {$request->site_address}",
+                $assessment->toArray()
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Assessment request saved successfully.',
@@ -170,6 +213,14 @@ class AssessmentController extends Controller
             ], 201);
 
         } catch (\Throwable $e) {
+            // Log failure
+            AuditLogService::logFailure(
+                Auth::user(),
+                'Site Assessment',
+                'Create assessment',
+                'Failed to save assessment: ' . $e->getMessage()
+            );
+            
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to save assessment',

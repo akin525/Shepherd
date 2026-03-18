@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Operations;
 use App\Http\Controllers\Controller;
 use App\Models\SopGenerator;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 
@@ -77,6 +79,15 @@ class SopGeneratorController extends Controller
                 'emergency_instructions' => $request->emergency_instructions ?? []
             ]);
 
+            // Log SOP creation
+            AuditLogService::logCreate(
+                Auth::user(),
+                'SOP',
+                $request->sop_title,
+                "SOP created: {$request->sop_title} for {$request->client_name} at {$request->location}",
+                $sop->toArray()
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'SOP created successfully',
@@ -84,6 +95,14 @@ class SopGeneratorController extends Controller
             ], 201);
 
         } catch (\Throwable $e) {
+            AuditLogService::logFailure(
+                Auth::user(),
+                'Created',
+                'SOP',
+                $request->sop_title ?? 'Unknown',
+                "Failed to create SOP: {$e->getMessage()}"
+            );
+
             return response()->json(['status' => false, 'message' => 'Failed to create SOP', 'error' => $e->getMessage()], 500);
         }
     }

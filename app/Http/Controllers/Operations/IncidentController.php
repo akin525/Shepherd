@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Incident;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use App\Services\AuditLogService;
 
 class IncidentController extends Controller
 {
@@ -41,6 +43,14 @@ class IncidentController extends Controller
                     'raw_status' => $item->status
                 ];
             });
+
+            // Log view action
+            AuditLogService::logView(
+                Auth::user(),
+                'Incidents',
+                'List view',
+                "Viewed incidents list with filters: " . ($request->search ? "search={$request->search}" : 'none')
+            );
 
             return response()->json([
                 'status' => true,
@@ -89,6 +99,15 @@ class IncidentController extends Controller
                 'status' => 'under_review'
             ]);
 
+            // Log incident creation
+            AuditLogService::logCreate(
+                Auth::user(),
+                'Incident',
+                $incidentId,
+                "Incident reported: {$request->incident_type} at {$request->location} by {$request->guard_name}",
+                $incident->toArray()
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Incident reported successfully',
@@ -96,6 +115,14 @@ class IncidentController extends Controller
             ], 201);
 
         } catch (\Throwable $e) {
+            // Log failure
+            AuditLogService::logFailure(
+                Auth::user(),
+                'Incident',
+                'Create incident',
+                'Failed to report incident: ' . $e->getMessage()
+            );
+            
             return response()->json(['status' => false, 'message' => 'Failed to report incident'], 500);
         }
     }
@@ -130,12 +157,28 @@ class IncidentController extends Controller
                 'evidence' => $incident->evidence_photos ?? []
             ];
 
+            // Log view action
+            AuditLogService::logView(
+                Auth::user(),
+                'Incident',
+                $incident->incident_id,
+                "Viewed incident details: {$incident->title} at {$incident->location}"
+            );
+
             return response()->json([
                 'status' => true,
                 'data' => $data
             ]);
 
         } catch (\Throwable $e) {
+            // Log failure
+            AuditLogService::logFailure(
+                Auth::user(),
+                'Incident',
+                'View incident',
+                "Failed to view incident {$id}: " . $e->getMessage()
+            );
+            
             return response()->json(['status' => false, 'message' => 'Error loading details'], 500);
         }
     }

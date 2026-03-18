@@ -13,6 +13,7 @@ use App\Models\EscalationType;
 use App\Models\Payment;
 use App\Models\Subscription;
 use App\Models\SubscriptionItem;
+use App\Services\AuditLogService;
 use App\Services\SaySwitchServices;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -98,6 +99,15 @@ class ClientController extends Controller
 
             DB::commit();
 
+            // Log the action
+            AuditLogService::logCreate(
+                Auth::user(),
+                'Client',
+                $client->name,
+                "Client created: {$client->name}" . ($client->company ? " ({$client->company})" : ''),
+                $client->toArray()
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Client created successfully',
@@ -105,6 +115,16 @@ class ClientController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // Log failure
+            AuditLogService::logFailure(
+                Auth::user(),
+                'Created',
+                'Client',
+                $validated['name'] ?? 'Unknown',
+                "Failed to create client: {$e->getMessage()}"
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to create client',
@@ -119,6 +139,14 @@ class ClientController extends Controller
     public function show(Client $client): JsonResponse
     {
         $client->load(['contacts', 'documents', 'tickets', 'complaints', 'creator', 'user']);
+
+        // Log view action
+        AuditLogService::logView(
+            Auth::user(),
+            'Client',
+            $client->name,
+            "Viewed client details: {$client->name}"
+        );
 
         return response()->json([
             'success' => true,
@@ -149,9 +177,20 @@ class ClientController extends Controller
             'user_id' => 'nullable|exists:users,id',
         ]);
 
+        $oldValues = $client->toArray();
         $validated['updated_by'] = Auth::id();
 
         $client->update($validated);
+
+        // Log update action
+        AuditLogService::logUpdate(
+            Auth::user(),
+            'Client',
+            $client->name,
+            "Client updated: {$client->name}",
+            $oldValues,
+            $client->toArray()
+        );
 
         return response()->json([
             'success' => true,
@@ -166,13 +205,33 @@ class ClientController extends Controller
     public function destroy(Client $client): JsonResponse
     {
         try {
+            $clientName = $client->name;
+            $clientData = $client->toArray();
             $client->delete();
+
+            // Log delete action
+            AuditLogService::logDelete(
+                Auth::user(),
+                'Client',
+                $clientName,
+                "Client deleted: {$clientName}",
+                $clientData
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Client deleted successfully',
             ]);
         } catch (\Exception $e) {
+            // Log failure
+            AuditLogService::logFailure(
+                Auth::user(),
+                'Deleted',
+                'Client',
+                $client->name,
+                "Failed to delete client: {$e->getMessage()}"
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete client',

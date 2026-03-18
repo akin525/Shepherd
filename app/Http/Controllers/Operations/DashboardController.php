@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use App\Services\AuditLogService;
 
 class DashboardController
 {
@@ -88,6 +89,14 @@ class DashboardController
             $recentActivities = $activities->sortByDesc('timestamp')->take(6)->values();
 
 
+            // Log dashboard view
+            AuditLogService::logView(
+                $user,
+                'Operations Dashboard',
+                'Dashboard Data',
+                "Viewed operations dashboard with {$activeGuardsCount} active guards and {$incidentsToday} incidents today"
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Dashboard data retrieved successfully',
@@ -103,6 +112,14 @@ class DashboardController
             ]);
 
         } catch (\Throwable $e) {
+            // Log failure
+            AuditLogService::logFailure(
+                $user ?? null,
+                'Operations Dashboard',
+                'View Dashboard',
+                'Failed to load dashboard: ' . $e->getMessage()
+            );
+            
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to load dashboard',
@@ -114,6 +131,7 @@ class DashboardController
     public function getAttendanceOverview(Request $request): JsonResponse
     {
         try {
+            $user = Auth::user();
             $today = Carbon::today()->format('Y-m-d');
 
             $totalScheduled = Employee::where('is_active', true)->count();
@@ -183,6 +201,14 @@ class DashboardController
                 ];
             });
 
+            // Log attendance overview view
+            AuditLogService::logView(
+                $user,
+                'Operations Dashboard',
+                'Attendance Overview',
+                "Viewed attendance overview: {$onDutyCount} on duty, {$lateCount} late, {$absentCount} absent"
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Attendance overview retrieved successfully',
@@ -198,6 +224,14 @@ class DashboardController
             ]);
 
         } catch (\Throwable $e) {
+            // Log failure
+            AuditLogService::logFailure(
+                Auth::user() ?? null,
+                'Operations Dashboard',
+                'Attendance Overview',
+                'Failed to fetch attendance data: ' . $e->getMessage()
+            );
+            
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to fetch attendance data',

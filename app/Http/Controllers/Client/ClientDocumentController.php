@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Client;
 use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\ClientDocument;
+use App\Services\AuditLogService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
@@ -112,12 +113,29 @@ class ClientDocumentController extends Controller
 
             $document = ClientDocument::create($documentData);
 
+            // Log document upload
+            AuditLogService::logCreate(
+                $user,
+                'Client Document',
+                $validated['title'],
+                "Document uploaded: {$validated['title']} for client {$validated['client_id']}",
+                $document->toArray()
+            );
+
             return response()->json([
                 'success' => true,
                 'message' => 'Document uploaded successfully',
                 'data' => $document->load(['client', 'creator']),
             ], 201);
         } catch (\Exception $e) {
+            AuditLogService::logFailure(
+                $user,
+                'Created',
+                'Client Document',
+                $validated['title'] ?? 'Unknown',
+                "Failed to upload document: {$e->getMessage()}"
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to upload document',
@@ -156,6 +174,14 @@ class ClientDocumentController extends Controller
 
         $document->load(['client', 'creator']);
 
+        // Log document view
+        AuditLogService::logView(
+            $user,
+            'Client Document',
+            $document->title,
+            "Viewed document: {$document->title}"
+        );
+
         return response()->json([
             'success' => true,
             'data' => $document,
@@ -184,9 +210,20 @@ class ClientDocumentController extends Controller
             'status' => 'sometimes|enum:active,inactive,archived',
         ]);
 
+        $oldValues = $document->toArray();
         $validated['updated_by'] = $user->id;
 
         $document->update($validated);
+
+        // Log document update
+        AuditLogService::logUpdate(
+            $user,
+            'Client Document',
+            $document->title,
+            "Document updated: {$document->title}",
+            $oldValues,
+            $document->toArray()
+        );
 
         return response()->json([
             'success' => true,
@@ -211,17 +248,37 @@ class ClientDocumentController extends Controller
         }
 
         try {
+            $title = $document->title;
+            $filePath = $document->file_path;
+            
             // Delete file from storage
-            Storage::disk('public')->delete($document->file_path);
+            Storage::disk('public')->delete($filePath);
 
             // Delete record
             $document->delete();
+
+            // Log document deletion
+            AuditLogService::logDelete(
+                $user,
+                'Client Document',
+                $title,
+                "Document deleted: {$title}",
+                ['title' => $title, 'file_path' => $filePath]
+            );
 
             return response()->json([
                 'success' => true,
                 'message' => 'Document deleted successfully',
             ]);
         } catch (\Exception $e) {
+            AuditLogService::logFailure(
+                $user,
+                'Deleted',
+                'Client Document',
+                $document->title,
+                "Failed to delete document: {$e->getMessage()}"
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to delete document',
@@ -262,14 +319,38 @@ class ClientDocumentController extends Controller
             $filePath = $document->file_path;
             
             if (!Storage::disk('public')->exists($filePath)) {
+                AuditLogService::logFailure(
+                    $user,
+                    'Viewed',
+                    'Client Document',
+                    $document->title,
+                    "Failed to download document: File not found"
+                );
+
                 return response()->json([
                     'success' => false,
                     'message' => 'File not found',
                 ], 404);
             }
 
+            // Log document download
+            AuditLogService::logView(
+                $user,
+                'Client Document',
+                $document->title,
+                "Downloaded document: {$document->title}"
+            );
+
             return Storage::disk('public')->download($filePath, $document->file_name);
         } catch (\Exception $e) {
+            AuditLogService::logFailure(
+                $user,
+                'Viewed',
+                'Client Document',
+                $document->title,
+                "Failed to download document: {$e->getMessage()}"
+            );
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to download file',
