@@ -16,7 +16,6 @@ class AuditLogController extends Controller
         $request->validate([
             'page' => 'sometimes|integer|min:1',
             'per_page' => 'sometimes|integer|min:1|max:100',
-            'user_id' => 'sometimes|integer|exists:users,id',
             'action_type' => 'sometimes|string',
             'feature' => 'sometimes|string',
             'start_date' => 'sometimes|date',
@@ -25,7 +24,10 @@ class AuditLogController extends Controller
         ]);
 
         $perPage = $request->input('per_page', 50);
-        $filters = $request->only(['user_id', 'action_type', 'feature', 'start_date', 'end_date', 'search']);
+        $filters = $request->only(['action_type', 'feature', 'start_date', 'end_date', 'search']);
+
+        // Force the filter to only fetch logs for the currently logged-in user
+        $filters['user_id'] = $request->user()->id;
 
         $auditLogs = AuditLogService::getAuditLogs($filters)
             ->paginate($perPage);
@@ -43,7 +45,6 @@ class AuditLogController extends Controller
             ],
         ]);
     }
-
     /**
      * Get audit log statistics
      */
