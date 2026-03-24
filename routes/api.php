@@ -132,16 +132,5 @@ Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(functi
     Route::get('/reports/payroll', [PayrollController::class, 'payrollReport']);
 });
 
-Route::get('/fix-storage', function () {
-    $targetFolder = storage_path('app/public');
-    $linkFolder = $_SERVER['DOCUMENT_ROOT'] . '/storage';
-
-    try {
-        symlink($targetFolder, $linkFolder);
-        return 'Success! The storage link has been created for cPanel.';
-    } catch (\Exception $e) {
-        return 'Error: ' . $e->getMessage();
-    }
-});
 require __DIR__ . '/client.php';
 require __DIR__ . '/operations.php';
