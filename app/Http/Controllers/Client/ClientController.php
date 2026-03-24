@@ -561,6 +561,9 @@ class ClientController extends Controller
                     'equipments' => (int)($row->equipments ?? 0),
                     'status' => $status, // 'pending' | 'paid'
                     'status_dot' => $status === 'pending' ? 'yellow' : 'green',
+                    'proof_of_payment' => $row->payment && $row->payment->proof_of_payment
+                        ? asset('storage/' . $row->payment->proof_of_payment)
+                        : null,
                 ];
             });
 

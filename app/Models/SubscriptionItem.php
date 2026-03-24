@@ -19,5 +19,9 @@ class SubscriptionItem extends Model
     {
         return $this->belongsTo(Subscription::class, 'subscription_id');
     }
+    public function payment(): BelongsTo
+    {
+        return $this->belongsTo(Payment::class, 'subscription_id');
+    }
 
 }
