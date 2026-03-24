@@ -29,6 +29,7 @@ Route::group(['prefix' => 'client'], function () {
         Route::post('escalations/{id}/reply', [ClientController::class, 'replyEscalation']);
 
         Route::post('/initialize', [ClientController::class, 'makePayment']);
+        Route::post('/initialize/manual', [ClientController::class, 'submitManualPayment']);
         Route::get('/verify-transaction/{reference}', [ClientController::class, 'verifyPayment']);
 
         Route::post('/send-otp', [ClientAuthController::class, 'sendOtp']);

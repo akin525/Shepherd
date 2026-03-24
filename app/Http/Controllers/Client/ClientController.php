@@ -115,7 +115,7 @@ class ClientController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             // Log failure
             AuditLogService::logFailure(
                 Auth::user(),
@@ -1189,6 +1189,69 @@ class ClientController extends Controller
             'status' => false,
             'message' => 'Could not initialize payment gateway. Please try again later.'
         ], 500);
+    }
+
+    public function submitManualPayment(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'subscription_id' => 'required|exists:subscriptions,id',
+            'payment_date' => 'required|date|before_or_equal:today',
+            'teller_reference' => 'nullable|string|max:255',
+            'proof_of_payment' => 'required|file|mimes:jpeg,png,jpg,pdf|max:2048', // max 2MB
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+        $subscription = Subscription::find($request->subscription_id);
+
+        if (!$subscription || $subscription->amount <= 0) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Invalid subscription or approval in process, kindly wait.',
+            ], 400);
+        }
+
+        $user = Auth::user();
+        $internalReference = 'SHEP-MAN-' . strtoupper(uniqid());
+        $displayReference = $request->teller_reference ? $request->teller_reference : $internalReference;
+        $proofPath = null;
+        if ($request->hasFile('proof_of_payment')) {
+            $proofPath = $request->file('proof_of_payment')->store('payment_proofs', 'public');
+        }
+
+        try {
+            Payment::create([
+                'subscription_id' => $subscription->id,
+                'user_id' => $user->id,
+                'reference' => $displayReference,
+                'transaction_id' => $internalReference,
+                'service' => $subscription->name ?? 'Subscription Payment',
+                'amount' => $subscription->amount,
+                'currency' => 'NGN',
+                'status' => 'pending',
+                'payment_gateway' => 'Manual Bank Transfer',
+                'proof_of_payment' => $proofPath,
+                'payment_date' => $request->payment_date,
+                'notes' => 'Manual payment submitted. Awaiting admin verification.',
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Your payment proof has been submitted successfully. Your subscription will be activated once an admin verifies the payment.'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Manual Payment Submission Error: ' . $e->getMessage());
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to submit manual payment. Please try again later.'
+            ], 500);
+        }
     }
 
     public function verifyPayment(Request $request, $reference, SaySwitchServices $saySwitch)
