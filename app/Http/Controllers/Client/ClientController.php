@@ -451,6 +451,13 @@ class ClientController extends Controller
                 ];
             });
 
+        AuditLogService::logView(
+            Auth::user(),
+            'Client',
+            $client->name,
+            "Viewed dashboard details: {$client->name}"
+        );
+
         // Payment table (Reference | Service | Number of Staffs | Status | Date)
         $payments = Payment::query()
             ->where('user_id', $user->id)
@@ -600,6 +607,12 @@ class ClientController extends Controller
 
         ];
 
+        AuditLogService::logView(
+            Auth::user(),
+            'Client',
+            $user->name,
+            "Viewed subscription details: {$user->name}"
+        );
         return response()->json([
             'status' => true,
             'data' => $data,
@@ -696,7 +709,12 @@ class ClientController extends Controller
             ],
             'rows' => $payments, // paginator with transformed rows
         ];
-
+        AuditLogService::logView(
+            Auth::user(),
+            'Client',
+            $user->name,
+            "Viewed payment history: {$user->name}"
+        );
         return response()->json([
             'status' => true,
             'data' => $data,
@@ -724,6 +742,7 @@ class ClientController extends Controller
 
     public function staff(Request $request)
     {
+        $user=$request->user();
         $perPage = $request->input('per_page', 20);
         $search = $request->input('search');
 
@@ -774,6 +793,12 @@ class ClientController extends Controller
             ];
         });
 
+        AuditLogService::logView(
+            Auth::user(),
+            'Client',
+            $user->name,
+            "Viewed staff details: {$user->name}"
+        );
         return response()->json([
             'status' => true,
             'message' => 'Data retrieved successfully',
@@ -818,6 +843,12 @@ class ClientController extends Controller
                 'service_type' => $request->service,
                 'number_of_staffs' => $request->staff_count,
             ]);
+            AuditLogService::logView(
+                Auth::user(),
+                'Client',
+                $user->name,
+                "request for services: {$user->name}"
+            );
             return response()->json([
                 'status' => true,
                 'message' => 'Plan requested successfully',
