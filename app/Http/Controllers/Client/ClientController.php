@@ -561,7 +561,6 @@ class ClientController extends Controller
                     'equipments' => (int)($row->equipments ?? 0),
                     'status' => $status, // 'pending' | 'paid'
                     'status_dot' => $status === 'pending' ? 'yellow' : 'green',
-//                    'download_url'    => route('subscriptions.download', ['id' => $row->id]),
                 ];
             });
 
@@ -627,23 +626,6 @@ class ClientController extends Controller
             });
         }
 
-//        if ($type->isNotEmpty()) {
-//            // type can be saved as 'service' or 'type'
-//            $query->where(function ($sub) use ($type) {
-//                $sub->where('type', $type)->orWhere('service', $type);
-//            });
-//        }
-
-//        if ($status->isNotEmpty()) {
-//            $normalized = strtolower($status);
-//            if ($normalized === 'dispensed') {
-//                // Map UI "Dispensed" to DB statuses
-//                $query->whereIn('status', ['dispensed', 'paid', 'deployed', 'completed']);
-//            } else {
-//                $query->where('status', $normalized);
-//            }
-//        }
-
         if ($from) {
             $query->whereDate('created_at', '>=', $from);
         }
@@ -659,16 +641,8 @@ class ClientController extends Controller
                 // Normalize
                 $status = strtolower($p->status);
                 $status_label = $status;
-//                $status_dot = 'orange';
-//                if (in_array($status, ['dispensed', 'paid', 'deployed', 'completed'])) {
-//                    $status_label = 'Dispensed';
-//                    $status_dot = 'green';
-//                } elseif ($status === 'pending') {
-//                    $status_label = 'Pending';
-//                    $status_dot = 'orange';
-//                }
 
-                // Currency and amount formatting (e.g., NPR8,000)
+                // Currency and amount formatting (e.g., NGN 8,000)
                 $currency = $p->currency ?? 'NGN';
                 $amountStr = $this->formatMoney($p->amount, $currency);
 
@@ -682,16 +656,20 @@ class ClientController extends Controller
                     'type' => $p->type ?? $p->service ?? '—',
                     'staff' => (int)($p->number_of_funds ?? $p->staff_count ?? 0),
                     'status' => $status_label,
-//                    'status_dot'       => $status_dot,
                     'date' => Carbon::parse($p->payment_date ?? $p->created_at)->format('d, F Y'),
-//                    'invoice_url'      => route('payments.invoice', ['id' => $p->id]),
+
+                    // --- NEW FIELDS ADDED HERE ---
+                    'payment_gateway' => $p->payment_gateway ?? 'N/A',
+                    'notes' => $p->notes,
+                    // Check if proof exists, then generate a full, accessible URL for the frontend
+                    'proof_of_payment' => $p->proof_of_payment ? asset('storage/' . $p->proof_of_payment) : null,
                 ];
             });
 
         // Header stats
         $totalAmount = (clone $query)->sum('amount'); // sum with same filters
         $completedAmount = (clone $query)
-            ->whereIn('status', ['dispensed', 'paid', 'deployed', 'completed'])
+            ->whereIn('status', ['dispensed', 'paid', 'deployed', 'successful', 'completed']) // Added 'successful' based on previous logic
             ->sum('amount');
 
         $completionPercent = $totalAmount > 0
@@ -702,7 +680,7 @@ class ClientController extends Controller
         $data = [
             'header' => [
                 'title' => 'Payment History',
-                'total_amount' => $this->formatMoney($totalAmount, $request->input('currency', 'NPR')),
+                'total_amount' => $this->formatMoney($totalAmount, $request->input('currency', 'NGN')), // Changed default to NGN based on your app
                 'completion_percent' => $completionPercent, // e.g., 30%
                 'active_tab' => 'All Payments',
             ],
@@ -722,7 +700,6 @@ class ClientController extends Controller
             'message' => 'data retrieved successfully',
         ]);
     }
-
     public function invoice(Request $request, int $id)
     {
         $user = $request->user();
