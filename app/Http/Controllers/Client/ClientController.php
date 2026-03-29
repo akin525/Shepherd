@@ -993,7 +993,7 @@ class ClientController extends Controller
                 'description' => $request->message,
                 'attachment' => $attachmentPath,
                 'status' => 'pending',
-                'priority' => 'medium',
+//                'priority' => 'medium',
                 'created_by' => $user->name ?? 'System',
             ]);
 
