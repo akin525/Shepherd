@@ -60,6 +60,7 @@ class SopGeneratorController extends Controller
             'procedure_steps' => 'nullable|array',
             'responsibilities' => 'nullable|array',
             'emergency_instructions' => 'nullable|array',
+            'document'=>'required|file',
         ]);
 
         if ($validator->fails()) {
@@ -69,6 +70,10 @@ class SopGeneratorController extends Controller
         try {
             // Mock default data if arrays are empty (just for demo purposes)
             // In production, you might want to leave them null or empty
+
+            if ($request->hasFile('document')) {
+                $file = $request->file('document')->store('sop-document', 'public');
+            }
             $sop = SopGenerator::create([
                 'sop_title' => $request->sop_title,
                 'client_name' => $request->client_name,
@@ -76,7 +81,8 @@ class SopGeneratorController extends Controller
                 'effective_date' => $request->effective_date,
                 'procedure_steps' => $request->procedure_steps ?? [],
                 'responsibilities' => $request->responsibilities ?? [],
-                'emergency_instructions' => $request->emergency_instructions ?? []
+                'emergency_instructions' => $request->emergency_instructions ?? [],
+                'document' => $file,
             ]);
 
             // Log SOP creation
