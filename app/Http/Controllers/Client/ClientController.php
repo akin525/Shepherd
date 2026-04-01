@@ -1260,7 +1260,7 @@ class ClientController extends Controller
             Log::error('Manual Payment Submission Error: ' . $e->getMessage());
             return response()->json([
                 'status' => false,
-                'message' => 'Failed to submit manual payment. Please try again later.'
+                'message' => 'Failed to submit manual payment. Please try again later.'.$e->getMessage()
             ], 500);
         }
     }
