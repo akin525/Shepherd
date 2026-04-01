@@ -132,6 +132,7 @@ class SopGeneratorController extends Controller
                     'procedure_steps' => $sop->procedure_steps ?? [],
                     'responsibilities' => $sop->responsibilities ?? [],
                     'emergency_instructions' => $sop->emergency_instructions ?? [],
+                    'document'=>$sop->document,
                 ]
             ]);
 
