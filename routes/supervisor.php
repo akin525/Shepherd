@@ -1,43 +1,20 @@
 <?php
 
-use App\Http\Controllers\Client\SupervisorAuthController;
-use App\Http\Controllers\Client\SupervisorController;
-use App\Http\Controllers\IssueController;
-use App\Http\Controllers\Operations\AssessmentController;
-use App\Http\Controllers\ResignationController;
-use App\Http\Controllers\TrainingController;
-use Illuminate\Http\Request;
+
+use App\Http\Controllers\supervisor\AnnouncementController;
+use App\Http\Controllers\supervisor\AssetController;
+use App\Http\Controllers\supervisor\AttendanceController;
+use App\Http\Controllers\supervisor\AuthController;
+use App\Http\Controllers\supervisor\EmployeeController;
+use App\Http\Controllers\supervisor\IssueController;
+use App\Http\Controllers\supervisor\LeaveController;
+use App\Http\Controllers\supervisor\PayrollController;
+use App\Http\Controllers\supervisor\ProfileController;
+use App\Http\Controllers\supervisor\PerformanceController;
+use App\Http\Controllers\supervisor\ResignationController;
+use App\Http\Controllers\supervisor\TrainingController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\LeaveController;
-use App\Http\Controllers\PayrollController;
-use App\Http\Controllers\AnnouncementController;
-use App\Http\Controllers\PerformanceController;
-use App\Http\Controllers\AssetController;
-use App\Http\Controllers\ProfileController;
 
-/*
-|--------------------------------------------------------------------------
-| API Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register API routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "api" middleware group. Make something great!
-|
-*/
-
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
-
-// Public routes
-Route::post('/auth/login', [AuthController::class, 'login']);
-Route::post('/auth/register', [AuthController::class, 'register']);
-
-// Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Authentication
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -123,14 +100,3 @@ Route::middleware('auth:sanctum')->group(function () {
 
 });
 
-// Admin routes (requires admin role)
-Route::middleware(['auth:sanctum', 'role:admin'])->prefix('admin')->group(function () {
-    Route::apiResource('employees', EmployeeController::class);
-    Route::apiResource('announcements', AnnouncementController::class)->except(['index', 'show']);
-    Route::post('/attendance/adjust', [AttendanceController::class, 'adjustAttendance']);
-    Route::get('/reports/attendance', [AttendanceController::class, 'attendanceReport']);
-    Route::get('/reports/payroll', [PayrollController::class, 'payrollReport']);
-});
-
-require __DIR__ . '/client.php';
-require __DIR__ . '/operations.php';

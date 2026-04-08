@@ -54,14 +54,16 @@ class SopGeneratorController extends Controller
         $validator = Validator::make($request->all(), [
             'sop_title' => 'required|string',
             'client_name' => 'required|string',
+            'client_id' => 'required',
             'location' => 'required|string',
             'effective_date' => 'required|date',
             // Arrays are optional initially, but validated if present
             'procedure_steps' => 'nullable|array',
             'responsibilities' => 'nullable|array',
             'emergency_instructions' => 'nullable|array',
-            'document'=>'required|file',
-        ]);
+            'document' => 'required|file|mimes:pdf,doc,docx|max:10240',
+
+            ]);
 
         if ($validator->fails()) {
             return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
@@ -71,18 +73,21 @@ class SopGeneratorController extends Controller
             // Mock default data if arrays are empty (just for demo purposes)
             // In production, you might want to leave them null or empty
 
+            $documentPath = null;
+
             if ($request->hasFile('document')) {
-                $file = $request->file('document')->store('sop-document', 'public');
+                $documentPath = $request->file('document')->store('sop-document', 'public');
             }
             $sop = SopGenerator::create([
                 'sop_title' => $request->sop_title,
                 'client_name' => $request->client_name,
+                'client_id' => $request->client_id,
                 'location' => $request->location,
                 'effective_date' => $request->effective_date,
                 'procedure_steps' => $request->procedure_steps ?? [],
                 'responsibilities' => $request->responsibilities ?? [],
                 'emergency_instructions' => $request->emergency_instructions ?? [],
-                'document' => $file,
+                'document' => $documentPath,
             ]);
 
             // Log SOP creation

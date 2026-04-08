@@ -176,6 +176,10 @@ class Employee extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    public function clientStaff(): BelongsTo
+    {
+        return $this->belongsTo(ClientStaff::class, 'id');
+    }
 
     /**
      * Get the department that belongs to the employee.

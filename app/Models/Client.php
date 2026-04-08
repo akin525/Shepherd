@@ -25,6 +25,10 @@ class Client extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+    public function staff()
+    {
+        return $this->belongsTo(ClientStaff::class, 'client_id');
+    }
 
     /**
      * Get the user who created the client.

@@ -17,6 +17,7 @@ class SopGenerator extends Model
         'procedure_steps',
         'responsibilities',
         'emergency_instructions',
+        'document',
     ];
 
     // Automatically cast JSON to array

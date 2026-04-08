@@ -22,7 +22,8 @@ Route::group(['prefix' => 'client'], function () {
     Route::post('/login', [ClientAuthController::class, 'login']);
     Route::get('/logout', [ClientAuthController::class, 'logout']);
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'client'])->group(function () {
+
 
         //client
         Route::get('/dashboard', [ClientController::class, 'dashboard']);
