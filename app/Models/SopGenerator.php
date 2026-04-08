@@ -12,6 +12,7 @@ class SopGenerator extends Model
     protected $fillable = [
         'sop_title',
         'client_name',
+        'client_id',
         'location',
         'effective_date',
         'procedure_steps',
