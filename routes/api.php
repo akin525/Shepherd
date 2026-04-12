@@ -124,7 +124,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::post('/start-patrol', [PatrolController::class, 'saveGuardInspection']);
-    Route::post('/add-review', [\App\Http\Controllers\Client\ClientController::class, 'addReview']);
+    Route::post('/add-review', [\App\Http\Controllers\Client\ClientController::class, 'addReviewF']);
 
 });
 
