@@ -4,6 +4,7 @@ use App\Http\Controllers\Client\SupervisorAuthController;
 use App\Http\Controllers\Client\SupervisorController;
 use App\Http\Controllers\IssueController;
 use App\Http\Controllers\Operations\AssessmentController;
+use App\Http\Controllers\Operations\PatrolController;
 use App\Http\Controllers\ResignationController;
 use App\Http\Controllers\TrainingController;
 use Illuminate\Http\Request;
@@ -120,6 +121,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
     Route::get('/audit-log', [\App\Http\Controllers\AuditLogController::class, 'index']);
+
+
+    Route::post('/start-patrol', [PatrolController::class, 'saveGuardInspection']);
+    Route::post('/add-review', [\App\Http\Controllers\Client\ClientController::class, 'addReview']);
 
 });
 

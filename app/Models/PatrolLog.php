@@ -12,7 +12,7 @@ class PatrolLog extends Model
     protected $fillable = [
         'guard_name', 'location', 'patrol_area', 'patrol_date',
         'patrol_time', 'observation', 'incident_found',
-        'incident_description', 'evidence_files', 'status'
+        'incident_description', 'evidence_files', 'status', 'meta'
     ];
 
     protected $casts = [

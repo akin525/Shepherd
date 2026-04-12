@@ -135,4 +135,106 @@ class PatrolController extends Controller
             return response()->json(['status' => false, 'message' => 'Failed to submit report', 'error' => $e->getMessage()], 500);
         }
     }
+
+    public function saveGuardInspection(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'guards_on_site'       => 'required|json',
+            'essential_items'      => 'required|json',
+            'location'             => 'required|string',
+            'patrol_area'          => 'required|string',
+            'patrol_date'          => 'required|date',
+            'patrol_time'          => 'required',
+            'observation'          => 'required|string',
+            'incident_found'       => 'required|boolean',
+            'incident_description' => 'nullable|required_if:incident_found,1,true|string',
+            'evidence.*'           => 'nullable|file|mimes:jpg,jpeg,png,mp4,mov|max:20480',
+            'uniform_photo'        => 'nullable|file|mimes:jpg,jpeg,png|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['status' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        try {
+            $filePaths = [];
+            if ($request->hasFile('evidence')) {
+                foreach ($request->file('evidence') as $file) {
+                    $filePaths[] = $file->store('patrols', 'public');
+                }
+            }
+
+            $photoPath = null;
+            if ($request->hasFile('uniform_photo')) {
+                $photoPath = $request->file('uniform_photo')->store('inspections', 'public');
+            }
+
+            $metaData = [
+                'uniform' => [
+                    'proper_uniform' => $request->input('proper_uniform'),
+                    'id_visible'     => $request->input('id_visible'),
+                    'photo'          => $photoPath
+                ],
+                'alertness' => [
+                    'awake'       => $request->input('awake'),
+                    'phone_usage' => $request->input('phone_usage'),
+                    'notes'       => $request->input('alertness_notes')
+                ],
+                'equipment' => [
+                    'radio'      => $request->input('equipment_radio'),
+                    'flashlight' => $request->input('equipment_flashlight'),
+                    'log_book'   => $request->input('equipment_log_book'),
+                    'whistle'    => $request->input('equipment_whistle'),
+                    'others'     => $request->input('equipment_others')
+                ],
+                'misconduct' => [
+                    'type'    => $request->input('misconduct_type'),
+                    'details' => $request->input('misconduct_details')
+                ]
+            ];
+
+            $status = $request->boolean('incident_found') ? 'escalated' : 'completed';
+            $essentialItems = json_decode($request->essential_items, true);
+
+            $log = PatrolLog::create([
+                'guard_name'           => $request->guards_on_site,
+                'location'             => $request->location,
+                'patrol_area'          => $request->patrol_area,
+                'patrol_date'          => $request->patrol_date,
+                'patrol_time'          => $request->patrol_time,
+                'observation'          => $request->observation,
+                'essential_items'      => $essentialItems,
+                'incident_found'       => $request->boolean('incident_found'),
+                'incident_description' => $request->incident_description,
+                'evidence_files'       => $filePaths,
+                'status'               => $status,
+                'meta'                 => $metaData
+            ]);
+
+            AuditLogService::logCreate(
+                $request->user(),
+                'Patrol',
+                "{$request->location} - {$request->patrol_area}",
+                "Patrol report submitted for {$request->location}, area: {$request->patrol_area}, status: {$status}",
+                $log->toArray()
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Patrol report and inspection saved successfully',
+                'data' => $log
+            ], 201);
+
+        } catch (\Throwable $e) {
+            AuditLogService::logFailure(
+                $request->user(),
+                'Created',
+                'Patrol',
+                $request->location ?? 'Unknown',
+                "Failed to submit patrol report: {$e->getMessage()}"
+            );
+
+            return response()->json(['status' => false, 'message' => 'Failed to submit report', 'error' => $e->getMessage()], 500);
+        }
+    }
 }

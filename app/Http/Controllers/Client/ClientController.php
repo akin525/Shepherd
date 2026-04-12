@@ -1352,4 +1352,54 @@ class ClientController extends Controller
             ], 500);
         }
     }
+
+    public function addReviewF(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'staff_id' => 'required|integer',
+            'star' => 'required|integer|min:1|max:5',
+            'review' => 'required|string|max:1000',
+            'note'=>'required',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $staff = ClientStaff::with('employee')->find($request->staff_id);
+
+            if (!$staff) {
+                return response()->json(['status' => false, 'message' => 'Staff not found'], 404);
+            }
+
+            $employee = $staff->employee;
+
+            if (!$employee) {
+                return response()->json(['status' => false, 'message' => 'Associated employee record not found'], 404);
+            }
+
+
+            $employee->rating = $request->star;
+            $employee->rating_comment = $request->review;
+            $employee->note = $request->note;
+            $employee->save();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Review added successfully.',
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to add review',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
