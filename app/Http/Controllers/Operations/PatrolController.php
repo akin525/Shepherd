@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operations;
 
 use App\Http\Controllers\Controller;
+use App\Models\Employee;
 use App\Models\PatrolLog;
 use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
@@ -361,6 +362,70 @@ class PatrolController extends Controller
             return response()->json([
                 'status'  => false,
                 'message' => 'Failed to retrieve report summary',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
+
+    public function getReportAnalytics(Request $request)
+    {
+        try {
+            $userId = $request->user()->id;
+            $today = Carbon::today()->toDateString();
+
+            $patrols = PatrolLog::where('user_id', $userId)
+                ->where('patrol_date', $today)
+                ->get();
+            $totalAssigned = $patrols->count();
+            $completedCount = $patrols->where('status', 'completed')->count();
+
+            $completionRate = 0;
+            if ($totalAssigned > 0) {
+                $completionRate = round(($completedCount / $totalAssigned) * 100);
+            }
+            $incidentsCount = $patrols->where('incident_found', 1)->count();
+
+            $misconductCount = $patrols->filter(function ($patrol) {
+                $meta = is_string($patrol->meta) ? json_decode($patrol->meta, true) : $patrol->meta;
+
+                return isset($meta['misconduct']['type']) &&
+                    $meta['misconduct']['type'] !== 'None' &&
+                    $meta['misconduct']['type'] !== '';
+            })->count();
+
+            $reviews = Employee::where('user_id', $userId)->get();
+
+            $averageScore = $reviews->avg('rating') ?? 0;
+            $positiveCount = $reviews->whereIn('rating', [4, 5])->count();
+            $neutralCount  = $reviews->where('rating', 3)->count();
+            $negativeCount = $reviews->whereIn('rating', [1, 2])->count();
+            return response()->json([
+                'status' => true,
+                'message' => 'Report analytics retrieved successfully',
+                'data' => [
+                    'analytics_cards' => [
+                        'completion_rate'  => $completionRate . '%',
+                        'total_incidents'  => $incidentsCount,
+                        'misconduct_cases' => $misconductCount,
+                        'feedback_score'   => number_format($averageScore, 1)
+                    ],
+                    'issues_overview' => [
+                        'incidents'  => $incidentsCount,
+                        'misconduct' => $misconductCount
+                    ],
+                    'feedback_trend' => [
+                        'positive' => $positiveCount,
+                        'neutral'  => $neutralCount,
+                        'negative' => $negativeCount > 0 ? $negativeCount : '---'
+                    ]
+                ]
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Failed to retrieve analytics',
                 'error'   => $e->getMessage()
             ], 500);
         }

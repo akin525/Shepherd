@@ -127,6 +127,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/add-review', [\App\Http\Controllers\Client\ClientController::class, 'addReviewF']);
     Route::get('/get-assignments', [PatrolController::class, 'getAssignments']);
     Route::get('/get-reports', [PatrolController::class, 'getReportSummary']);
+    Route::get('/analytics-report', [PatrolController::class, 'getReportAnalytics']);
 
 });
 
