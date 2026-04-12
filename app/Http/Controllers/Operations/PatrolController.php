@@ -297,4 +297,72 @@ class PatrolController extends Controller
             ], 500);
         }
     }
+
+    public function getReportSummary(Request $request)
+    {
+        try {
+            $userId = $request->user()->id;
+            $today = Carbon::today()->toDateString();
+
+            $patrols = PatrolLog::where('user_id', $userId)
+                ->where('patrol_date', $today)
+                ->orderBy('patrol_time', 'asc')
+                ->get();
+
+            $totalAssigned = $patrols->count();
+            $completedPatrols = $patrols->where('status', 'completed');
+            $completedCount = $completedPatrols->count();
+            $incidentsCount = $patrols->where('incident_found', 1)->count();
+            $misconductCount = $patrols->filter(function ($patrol) {
+                $meta = is_string($patrol->meta) ? json_decode($patrol->meta, true) : $patrol->meta;
+                return isset($meta['misconduct']['type']) &&
+                    $meta['misconduct']['type'] !== 'None' &&
+                    $meta['misconduct']['type'] !== '';
+            })->count();
+            $feedbackCount = 3;
+            $locationList = $patrols->map(function ($patrol) {
+                $meta = is_string($patrol->meta) ? json_decode($patrol->meta, true) : $patrol->meta;
+                $notes = $patrol->observation ?? 'Guard compliant, no issues'; // Default
+
+                if (isset($meta['misconduct']['type']) && $meta['misconduct']['type'] !== 'None') {
+                    $notes = "Misconduct: " . ($meta['misconduct']['details'] ?? $meta['misconduct']['type']);
+                } elseif ($patrol->incident_found) {
+                    $notes = "Incident: " . $patrol->incident_description;
+                } elseif (isset($meta['priority']) && $meta['priority'] === 'high') {
+                    $notes = "High Priority: " . $patrol->observation;
+                }
+
+                return [
+                    'id'       => $patrol->id,
+                    'location' => $patrol->location,
+                    'time'     => Carbon::parse($patrol->patrol_time)->format('h:i A'),
+                    'status'   => ucfirst($patrol->status), // e.g., "Completed"
+                    'notes'    => $notes
+                ];
+            })->values();
+
+            // 4. Return the formatted payload
+            return response()->json([
+                'status' => true,
+                'message' => 'Report summary retrieved successfully',
+                'data' => [
+                    'summary' => [
+                        // Formatted exactly like the UI: "3/3"
+                        'locations_visited' => "{$completedCount}/{$totalAssigned}",
+                        'misconduct_cases'  => $misconductCount,
+                        'incidents_logged'  => $incidentsCount,
+                        'client_feedback'   => $feedbackCount,
+                    ],
+                    'locations' => $locationList
+                ]
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Failed to retrieve report summary',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
 }
