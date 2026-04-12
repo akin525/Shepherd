@@ -197,6 +197,7 @@ class PatrolController extends Controller
             $essentialItems = json_decode($request->essential_items, true);
 
             $log = PatrolLog::create([
+                'user_id'              =>$request->user()->id,
                 'guard_name'           => $request->guards_on_site,
                 'location'             => $request->location,
                 'patrol_area'          => $request->patrol_area,
@@ -235,6 +236,65 @@ class PatrolController extends Controller
             );
 
             return response()->json(['status' => false, 'message' => 'Failed to submit report', 'error' => $e->getMessage()], 500);
+        }
+    }
+
+    public function getAssignments(Request $request)
+    {
+        try {
+            $userId = $request->user()->id;
+            $today = Carbon::today()->toDateString();
+
+            $patrols = PatrolLog::where('user_id', $userId)
+                ->where('patrol_date', $today)
+                ->orderBy('patrol_time', 'asc') // Order by time of day
+                ->get();
+
+            $totalLocations = $patrols->count();
+            $completedCount = $patrols->where('status', 'completed')->count();
+            $highPriorityCount = $patrols->filter(function ($patrol) {
+                $meta = is_string($patrol->meta) ? json_decode($patrol->meta, true) : $patrol->meta;
+                return isset($meta['priority']) && $meta['priority'] === 'high';
+            })->count();
+
+            // 2. Format the Location List for the UI
+            $locationList = $patrols->map(function ($patrol) {
+
+                // Extract meta for frontend usage
+                $meta = is_string($patrol->meta) ? json_decode($patrol->meta, true) : $patrol->meta;
+                $priority = $meta['priority'] ?? 'normal';
+
+                return [
+                    'id'          => $patrol->id,
+                    'location'    => $patrol->location,
+                    // Format the database time (e.g., "08:00:00") to the UI format ("08:00 AM")
+                    'time'        => Carbon::parse($patrol->patrol_time)->format('g:i A'),
+                    'status'      => $patrol->status, // 'pending', 'completed', or 'escalated'
+                    'priority'    => $priority,       // 'high' or 'normal'
+                    'is_priority' => $priority === 'high'
+                ];
+            })->values(); // Re-index array
+
+            // 3. Return the formatted payload
+            return response()->json([
+                'status' => true,
+                'message' => 'Assignments retrieved successfully',
+                'data' => [
+                    'summary' => [
+                        'total_locations' => $totalLocations,
+                        'completed'       => $completedCount,
+                        'high_priority'   => $highPriorityCount,
+                    ],
+                    'locations' => $locationList
+                ]
+            ], 200);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status'  => false,
+                'message' => 'Failed to retrieve assignments',
+                'error'   => $e->getMessage()
+            ], 500);
         }
     }
 }
