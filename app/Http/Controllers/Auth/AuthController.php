@@ -53,7 +53,7 @@ class AuthController extends Controller
             'status' => true,
             'message' => 'Login successful',
             'data' => [
-//                'user' => $user,
+                'user' => $user,
                 'token' => $token,
                 'token_type' => 'Bearer'
             ]
