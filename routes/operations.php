@@ -19,6 +19,8 @@ Route::group(['prefix' => 'operations'], function () {
         Route::get('/attendance', [DashboardController::class, 'getAttendanceOverview']);
         Route::get('/client', [DashboardController::class, 'getAllClient']);
         Route::get('/client/s', [AuthController::class, 'clients']);
+        Route::get('/staff', [AuthController::class, 'staff']);
+        Route::get('/staff/details/{id}', [AuthController::class, 'staffDetails']);
 
         Route::post('/assessments', [AssessmentController::class, 'store']);
         Route::get('/assessments', [AssessmentController::class, 'index']);

@@ -3,7 +3,13 @@
 namespace App\Http\Controllers\Operations;
 
 use App\Http\Controllers\Controller;
+use App\Models\AttendanceEmployee;
 use App\Models\Client;
+use App\Models\Employee;
+use App\Models\EmployeeDeployment;
+use App\Models\EmployeeDocument;
+use App\Models\EquipmentMovement;
+use App\Models\PaySlip;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -87,6 +93,65 @@ class AuthController extends Controller
             return response()->json(['status' => true, 'data' => $client], 200);
         } catch (\Exception $e) {
             \Log::error('List Client Error: '.$e->getMessage());
+
+            return response()->json(['status' => false, 'message' => 'An internal server error occurred.'], 500);
+        }
+    }
+
+    public function staff(Request $request)
+    {
+        try {
+
+            $staff['total'] = Employee::count();
+            $staff['onfield'] = Employee::where('staff_type', 'field')->count();
+            $staff['deployed'] = Employee::where('deployed', 1)->count();
+            $staff['inactive'] = Employee::where('is_active', 0)->count();
+            $staff['staff_data'] = Employee::latest()->get();
+
+            return response()->json(['status' => true, 'staff' => $staff], 200);
+        } catch (\Exception $e) {
+            \Log::error('List Staff Error: '.$e->getMessage());
+
+            return response()->json(['status' => false, 'message' => 'An internal server error occurred.'], 500);
+        }
+    }
+
+    public function staffDetails(Request $request, $id)
+    {
+        try {
+
+
+            // Fetch Staff Details, Documents, and Equipment
+            $staff['details'] = Employee::whereId($id)->with('department')->first();
+            $staff['documents'] = EmployeeDocument::where('employee_id', $id)->latest()->get();
+            $staff['equipment'] = EquipmentMovement::where('employee_id', $id)->with('equipment')->latest()->get();
+            $staff['attendance'] = AttendanceEmployee::where('employee_id', $id)->latest()->get();
+
+            $payment['total_salary_received'] = PaySlip::where('employee_id', $id)->sum('basic_salary');
+            $payment['all_payments'] = PaySlip::where('employee_id', $id)->latest()->get();
+
+            // --- Deployment Calculations ---
+
+            $durationResult = EmployeeDeployment::where('employee_id', $id)->sum('hours');
+            $deployment['deployment_duration'] = $durationResult ?? 0;
+
+            // 1. Get Current/Latest Deployment WITH Client Object
+            // Using with('client') attaches the Client model as an object
+            $deployment['current_deployment'] = EmployeeDeployment::where('employee_id', $id)
+                ->with('client')
+                ->latest()
+                ->first();
+
+            // 2. Get All Deployments WITH Client Objects
+            $deployment['deployments'] = EmployeeDeployment::where('employee_id', $id)
+                ->with('client')
+                ->latest()->get();
+
+            $data = array_merge($staff, ['deployment' => $deployment, 'payment' => $payment]);
+
+            return response()->json(['status' => true, 'data' => $data], 200);
+        } catch (\Exception $e) {
+            \Log::error('Staff Details Error: '.$e->getMessage());
 
             return response()->json(['status' => false, 'message' => 'An internal server error occurred.'], 500);
         }
