@@ -225,40 +225,7 @@ class FinanceCustomerRetainershipController extends Controller
                 return response()->json(['status' => false, 'message' => 'User record not found.'], 404);
             }
 
-            // 2. PERMISSION CHECK
-            $isAdmin = (isset($userModel->type) && $userModel->type === 'admin');
-            $isAuthorized = false;
 
-            if ($isAdmin) {
-                $isAuthorized = true;
-            } else {
-                /* Logic: Check user_roles table -> role_id -> role_permissions table -> permission_id (85)
-                   We use whereHas to reach through the roles relationship to the rolePermissions relationship.
-                */
-                $hasPermission = User::where('id', $userModel->id)
-                    ->whereHas('roles.rolePermissions', function ($query) {
-                        $query->where('permission_id', 85);
-                    })
-                    ->exists();
-
-                if ($hasPermission) {
-                    $isAuthorized = true;
-                } else {
-                    // Fallback: Check if user is a designated Signatory for this specific form
-                    $employee = Employee::where('user_id', $userModel->id)->first();
-                    if ($employee) {
-                        $isAuthorized = (bool) $form->signatories->firstWhere('employee_id', $employee->id);
-                    }
-                }
-            }
-
-            // 3. Final Authorization Check
-            if (!$isAuthorized) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Access Denied: You do not have the required role permissions or signatory status.',
-                ], 403);
-            }
 
             // 5. Success
             return response()->json([
