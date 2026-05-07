@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Operations;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -70,6 +71,24 @@ class AuthController extends Controller
                 'message' => 'Login failed due to a server error.',
                 'error' => $e->getMessage()
             ], 500);
+        }
+    }
+
+    public function clients(Request $request)
+    {
+        try {
+            $user = $request->user();
+
+            $client['total'] = Client::count();
+            $client['active'] = Client::where('is_active', 1)->count();
+            $client['inactive'] = Client::where('is_active', 0)->count();
+            $client['client_data'] = Client::with('staff', 'contact', 'account_officer:id,name,email,phone')->latest()->get();
+
+            return response()->json(['status' => true, 'data' => $client], 200);
+        } catch (\Exception $e) {
+            \Log::error('List Client Error: '.$e->getMessage());
+
+            return response()->json(['status' => false, 'message' => 'An internal server error occurred.'], 500);
         }
     }
 
