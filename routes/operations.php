@@ -4,6 +4,7 @@
 use App\Http\Controllers\Operations\AssessmentController;
 use App\Http\Controllers\Operations\AuthController;
 use App\Http\Controllers\Operations\DashboardController;
+use App\Http\Controllers\Operations\FinanceCustomerRetainershipController;
 use App\Http\Controllers\Operations\IncidentController;
 use App\Http\Controllers\Operations\ManningStructureController;
 use App\Http\Controllers\Operations\PatrolController;
@@ -38,6 +39,15 @@ Route::group(['prefix' => 'operations'], function () {
         Route::get('sop-generators', [SopGeneratorController::class, 'index']);
         Route::post('sop-generators', [SopGeneratorController::class, 'store']);
         Route::get('sop-generators/{id}', [SopGeneratorController::class, 'show']);
+
+        Route::get('list', [FinanceCustomerRetainershipController::class, 'index']);
+        Route::post('generate', [FinanceCustomerRetainershipController::class, 'generate']);
+        Route::get('form/{id}', [FinanceCustomerRetainershipController::class, 'showByCode']);
+        Route::get('signatory/{id}', [FinanceCustomerRetainershipController::class, 'signatoryByCode']);
+        Route::get('equipment/{id}', [FinanceCustomerRetainershipController::class, 'equipmentByCode']);
+        Route::get('service/{id}', [FinanceCustomerRetainershipController::class, 'serviceByCode']);
+        Route::post('signature/update/{id}', [FinanceCustomerRetainershipController::class, 'updateSignatory']);
+        Route::delete('delete/{id}', [FinanceCustomerRetainershipController::class, 'destroy']);
 
     });
 
