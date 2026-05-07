@@ -40,6 +40,7 @@ Route::group(['prefix' => 'operations'], function () {
         Route::post('sop-generators', [SopGeneratorController::class, 'store']);
         Route::get('sop-generators/{id}', [SopGeneratorController::class, 'show']);
 
+        Route::group(['prefix' => 'retainership'], function () {
         Route::get('list', [FinanceCustomerRetainershipController::class, 'index']);
         Route::post('generate', [FinanceCustomerRetainershipController::class, 'generate']);
         Route::get('form/{id}', [FinanceCustomerRetainershipController::class, 'showByCode']);
@@ -48,6 +49,7 @@ Route::group(['prefix' => 'operations'], function () {
         Route::get('service/{id}', [FinanceCustomerRetainershipController::class, 'serviceByCode']);
         Route::post('signature/update/{id}', [FinanceCustomerRetainershipController::class, 'updateSignatory']);
         Route::delete('delete/{id}', [FinanceCustomerRetainershipController::class, 'destroy']);
+        });
 
     });
 
