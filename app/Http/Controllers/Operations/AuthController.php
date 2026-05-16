@@ -10,10 +10,12 @@ use App\Models\EmployeeDeployment;
 use App\Models\EmployeeDocument;
 use App\Models\EquipmentMovement;
 use App\Models\PaySlip;
+use App\Models\SupervisorGuardAssignment;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
@@ -155,6 +157,166 @@ class AuthController extends Controller
 
             return response()->json(['status' => false, 'message' => 'An internal server error occurred.'], 500);
         }
+    }
+
+    public function createSupervisor(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:6|confirmed',
+            'client_id' => 'required|integer|exists:clients,id',
+            'phone' => 'nullable|string|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'type' => 'supervisor',
+                'created_by' => optional($request->user())->id,
+            ]);
+
+            $employee = Employee::create([
+                'user_id' => $user->id,
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'staff_type' => 'supervisor',
+                'created_by' => optional($request->user())->id,
+            ]);
+
+            $clientStaff = EmployeeDeployment::create([
+                'client_id' => $request->client_id,
+                'employee_id' => $employee->id,
+                'status' => 1,
+                'validity_period'=>30,
+                'deployed_by'=>optional($request->user())->id,
+            ]);
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Supervisor created successfully',
+                'data' => [
+                    'user' => $user,
+                    'employee' => $employee,
+                    'client_staff' => $clientStaff,
+                ],
+            ], 201);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to create supervisor',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function assignSupervisorToGuard(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'supervisor_user_id' => 'required|integer|exists:users,id',
+            'guard_user_id' => 'required|integer|exists:users,id|different:supervisor_user_id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $supervisor = User::find($request->supervisor_user_id);
+            $guard = User::find($request->guard_user_id);
+
+            if (!$supervisor || $supervisor->type !== 'supervisor') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Selected supervisor user is invalid. User type must be supervisor.',
+                ], 422);
+            }
+
+            if (!$guard || $guard->type !== 'guard') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Selected guard user is invalid. User type must be guard.',
+                ], 422);
+            }
+
+            $supervisorClientId = $this->resolveClientIdForUser($supervisor->id);
+            $guardClientId = $this->resolveClientIdForUser($guard->id);
+
+            if (!$supervisorClientId) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Supervisor is not deployed to any client.',
+                ], 422);
+            }
+
+            if (!$guardClientId) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Guard is not deployed to any client.',
+                ], 422);
+            }
+
+            if ($supervisorClientId !== $guardClientId) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Supervisor and guard must belong to the same client.',
+                    'data' => [
+                        'supervisor_client_id' => $supervisorClientId,
+                        'guard_client_id' => $guardClientId,
+                    ],
+                ], 422);
+            }
+
+            $assignment = SupervisorGuardAssignment::updateOrCreate(
+                ['guard_user_id' => $guard->id],
+                [
+                    'client_id' => $guardClientId,
+                    'supervisor_user_id' => $supervisor->id,
+                    'assigned_by' => optional($request->user())->id,
+                ]
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Guard assigned to supervisor successfully',
+                'data' => $assignment,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to assign supervisor to guard',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    private function resolveClientIdForUser(int $userId): ?int
+    {
+        $employee = Employee::where('user_id', $userId)->first();
+        if (!$employee) {
+            return null;
+        }
+
+        $clientStaff = EmployeeDeployment::where('employee_id', $employee->id)
+            ->latest('id')
+            ->first();
+
+        return $clientStaff?->client_id ? (int) $clientStaff->client_id : null;
     }
 
     public function logout(Request $request): JsonResponse
