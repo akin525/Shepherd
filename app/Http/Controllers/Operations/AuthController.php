@@ -12,9 +12,11 @@ use App\Models\EquipmentMovement;
 use App\Models\PaySlip;
 use App\Models\SupervisorGuardAssignment;
 use App\Models\User;
+use App\Services\AuditLogService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
@@ -221,6 +223,39 @@ class AuthController extends Controller
         }
     }
 
+    public function getSupervisors(Request $request): JsonResponse
+    {
+        try {
+            $query = User::query()
+                ->where('type', 'supervisor')
+                ->select('id', 'name', 'email', 'created_at');
+
+            if ($request->filled('client_id')) {
+                $clientId = (int) $request->client_id;
+
+                $query->join('employees', 'employees.user_id', '=', 'users.id')
+                    ->join('client_staffs', 'client_staffs.employee_id', '=', 'employees.id')
+                    ->where('client_staffs.client_id', $clientId)
+                    ->select('users.id', 'users.name', 'users.email', 'users.created_at')
+                    ->distinct();
+            }
+
+            $supervisors = $query->orderBy('name')->paginate($request->integer('per_page', 15));
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Supervisors retrieved successfully',
+                'data' => $supervisors,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to retrieve supervisors',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function assignSupervisorToGuard(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -291,6 +326,14 @@ class AuthController extends Controller
                 ]
             );
 
+            AuditLogService::logCreate(
+                $request->user(),
+                'SupervisorGuardAssignment',
+                "Guard {$guard->id}",
+                "Assigned guard {$guard->id} to supervisor {$supervisor->id} for client {$guardClientId}",
+                $assignment->toArray()
+            );
+
             return response()->json([
                 'status' => true,
                 'message' => 'Guard assigned to supervisor successfully',
@@ -300,6 +343,344 @@ class AuthController extends Controller
             return response()->json([
                 'status' => false,
                 'message' => 'Failed to assign supervisor to guard',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getSupervisorGuards(Request $request, int $id): JsonResponse
+    {
+        try {
+            $supervisor = User::find($id);
+
+            if (!$supervisor || $supervisor->type !== 'supervisor') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Supervisor not found or invalid user type.',
+                ], 404);
+            }
+
+            $assignments = SupervisorGuardAssignment::with(['guard:id,name,email', 'client:id,name'])
+                ->where('supervisor_user_id', $id)
+                ->latest('id')
+                ->get();
+
+            $guards = $assignments->map(function ($assignment) {
+                return [
+                    'assignment_id' => $assignment->id,
+                    'client_id' => $assignment->client_id,
+                    'client_name' => optional($assignment->client)->name,
+                    'guard_user_id' => $assignment->guard_user_id,
+                    'guard_name' => optional($assignment->guard)->name,
+                    'guard_email' => optional($assignment->guard)->email,
+                    'assigned_by' => $assignment->assigned_by,
+                    'assigned_at' => optional($assignment->created_at)?->toDateTimeString(),
+                ];
+            });
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Supervisor guards retrieved successfully',
+                'data' => [
+                    'supervisor' => [
+                        'id' => $supervisor->id,
+                        'name' => $supervisor->name,
+                        'email' => $supervisor->email,
+                    ],
+                    'guards' => $guards,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to retrieve supervisor guards',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function getUnassignedGuards(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'client_id' => 'required|integer|exists:clients,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $assignedGuardIds = SupervisorGuardAssignment::pluck('guard_user_id')->toArray();
+
+            $guards = User::query()
+                ->join('employees', 'employees.user_id', '=', 'users.id')
+                ->join('client_staffs', 'client_staffs.employee_id', '=', 'employees.id')
+                ->where('type', 'guard')
+                ->where('client_staffs.client_id', $request->client_id)
+                ->whereNotIn('id', $assignedGuardIds)
+                ->select('users.id', 'users.name', 'users.email')
+                ->distinct()
+                ->orderBy('name')
+                ->get();
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Unassigned guards retrieved successfully',
+                'data' => $guards,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to retrieve unassigned guards',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function unassignGuard(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'guard_user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $assignment = SupervisorGuardAssignment::where('guard_user_id', $request->guard_user_id)->first();
+
+            if (!$assignment) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'No assignment found for this guard.',
+                ], 404);
+            }
+
+            $oldValues = $assignment->toArray();
+            $assignment->delete();
+
+            AuditLogService::logDelete(
+                $request->user(),
+                'SupervisorGuardAssignment',
+                "Guard {$request->guard_user_id}",
+                "Unassigned guard {$request->guard_user_id} from supervisor {$oldValues['supervisor_user_id']}",
+                $oldValues
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Guard unassigned successfully',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to unassign guard',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function reassignGuard(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'guard_user_id' => 'required|integer|exists:users,id',
+            'new_supervisor_user_id' => 'required|integer|exists:users,id|different:guard_user_id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $guard = User::find($request->guard_user_id);
+            $newSupervisor = User::find($request->new_supervisor_user_id);
+
+            if (!$guard || $guard->type !== 'guard') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Selected guard user is invalid. User type must be guard.',
+                ], 422);
+            }
+
+            if (!$newSupervisor || $newSupervisor->type !== 'supervisor') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Selected supervisor user is invalid. User type must be supervisor.',
+                ], 422);
+            }
+
+            $guardClientId = $this->resolveClientIdForUser($guard->id);
+            $newSupervisorClientId = $this->resolveClientIdForUser($newSupervisor->id);
+
+            if (!$guardClientId || !$newSupervisorClientId || $guardClientId !== $newSupervisorClientId) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Guard and supervisor must belong to the same client.',
+                    'data' => [
+                        'guard_client_id' => $guardClientId,
+                        'supervisor_client_id' => $newSupervisorClientId,
+                    ],
+                ], 422);
+            }
+
+            $assignment = SupervisorGuardAssignment::where('guard_user_id', $guard->id)->first();
+            $oldValues = $assignment?->toArray();
+
+            $assignment = SupervisorGuardAssignment::updateOrCreate(
+                ['guard_user_id' => $guard->id],
+                [
+                    'client_id' => $guardClientId,
+                    'supervisor_user_id' => $newSupervisor->id,
+                    'assigned_by' => optional($request->user())->id,
+                ]
+            );
+
+            AuditLogService::logUpdate(
+                $request->user(),
+                'SupervisorGuardAssignment',
+                "Guard {$guard->id}",
+                "Reassigned guard {$guard->id} to supervisor {$newSupervisor->id} for client {$guardClientId}",
+                $oldValues,
+                $assignment->toArray()
+            );
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Guard reassigned successfully',
+                'data' => $assignment,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Failed to reassign guard',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function bulkAssignGuards(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'assignments' => 'required|array|min:1',
+            'assignments.*.supervisor_user_id' => 'required|integer|exists:users,id',
+            'assignments.*.guard_user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $results = [];
+
+        DB::beginTransaction();
+        try {
+            foreach ($request->assignments as $index => $item) {
+                $supervisor = User::find($item['supervisor_user_id']);
+                $guard = User::find($item['guard_user_id']);
+
+                if (!$supervisor || $supervisor->type !== 'supervisor') {
+                    $results[] = [
+                        'index' => $index,
+                        'status' => false,
+                        'message' => 'Invalid supervisor user type. Must be supervisor.',
+                    ];
+                    continue;
+                }
+
+                if (!$guard || $guard->type !== 'guard') {
+                    $results[] = [
+                        'index' => $index,
+                        'status' => false,
+                        'message' => 'Invalid guard user type. Must be guard.',
+                    ];
+                    continue;
+                }
+
+                $supervisorClientId = $this->resolveClientIdForUser($supervisor->id);
+                $guardClientId = $this->resolveClientIdForUser($guard->id);
+
+                if (!$supervisorClientId || !$guardClientId || $supervisorClientId !== $guardClientId) {
+                    $results[] = [
+                        'index' => $index,
+                        'status' => false,
+                        'message' => 'Supervisor and guard must belong to the same client.',
+                        'data' => [
+                            'supervisor_client_id' => $supervisorClientId,
+                            'guard_client_id' => $guardClientId,
+                        ],
+                    ];
+                    continue;
+                }
+
+                $old = SupervisorGuardAssignment::where('guard_user_id', $guard->id)->first();
+                $oldValues = $old?->toArray();
+
+                $assignment = SupervisorGuardAssignment::updateOrCreate(
+                    ['guard_user_id' => $guard->id],
+                    [
+                        'client_id' => $guardClientId,
+                        'supervisor_user_id' => $supervisor->id,
+                        'assigned_by' => optional($request->user())->id,
+                    ]
+                );
+
+                AuditLogService::logUpdate(
+                    $request->user(),
+                    'SupervisorGuardAssignment',
+                    "Guard {$guard->id}",
+                    "Bulk assigned/reassigned guard {$guard->id} to supervisor {$supervisor->id} for client {$guardClientId}",
+                    $oldValues,
+                    $assignment->toArray()
+                );
+
+                $results[] = [
+                    'index' => $index,
+                    'status' => true,
+                    'message' => 'Assigned successfully',
+                    'data' => $assignment,
+                ];
+            }
+
+            DB::commit();
+
+            $successCount = collect($results)->where('status', true)->count();
+            $failedCount = count($results) - $successCount;
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Bulk assignment completed',
+                'data' => [
+                    'summary' => [
+                        'total' => count($results),
+                        'successful' => $successCount,
+                        'failed' => $failedCount,
+                    ],
+                    'results' => $results,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => false,
+                'message' => 'Bulk assignment failed',
                 'error' => $e->getMessage(),
             ], 500);
         }

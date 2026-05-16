@@ -21,8 +21,14 @@ Route::group(['prefix' => 'operations'], function () {
         Route::get('/client/s', [AuthController::class, 'clients']);
         Route::get('/staff', [AuthController::class, 'staff']);
         Route::get('/staff/details/{id}', [AuthController::class, 'staffDetails']);
+        Route::get('/supervisors', [AuthController::class, 'getSupervisors']);
         Route::post('/supervisors', [AuthController::class, 'createSupervisor']);
         Route::post('/supervisors/assign-guard', [AuthController::class, 'assignSupervisorToGuard']);
+        Route::get('/supervisors/{id}/guards', [AuthController::class, 'getSupervisorGuards']);
+        Route::get('/guards/unassigned', [AuthController::class, 'getUnassignedGuards']);
+        Route::post('/supervisors/unassign-guard', [AuthController::class, 'unassignGuard']);
+        Route::post('/supervisors/reassign-guard', [AuthController::class, 'reassignGuard']);
+        Route::post('/supervisors/assign-guards/bulk', [AuthController::class, 'bulkAssignGuards']);
 
         Route::post('/assessments', [AssessmentController::class, 'store']);
         Route::get('/assessments', [AssessmentController::class, 'index']);
