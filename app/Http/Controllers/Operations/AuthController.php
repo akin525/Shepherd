@@ -225,22 +225,28 @@ class AuthController extends Controller
 
     public function getSupervisors(Request $request): JsonResponse
     {
+        $validator = Validator::make($request->all(), [
+            'client_id' => 'required|integer|exists:clients,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
         try {
-            $query = User::query()
+            $supervisors = User::query()
+                ->join('employees', 'employees.user_id', '=', 'users.id')
+                ->join('client_staffs', 'client_staffs.employee_id', '=', 'employees.id')
                 ->where('type', 'supervisor')
-                ->select('id', 'name', 'email', 'created_at');
-
-            if ($request->filled('client_id')) {
-                $clientId = (int) $request->client_id;
-
-                $query->join('employees', 'employees.user_id', '=', 'users.id')
-                    ->join('client_staffs', 'client_staffs.employee_id', '=', 'employees.id')
-                    ->where('client_staffs.client_id', $clientId)
-                    ->select('users.id', 'users.name', 'users.email', 'users.created_at')
-                    ->distinct();
-            }
-
-            $supervisors = $query->orderBy('name')->paginate($request->integer('per_page', 15));
+                ->where('client_staffs.client_id', (int) $request->client_id)
+                ->select('users.id', 'users.name', 'users.email', 'users.created_at')
+                ->distinct()
+                ->orderBy('users.name')
+                ->paginate($request->integer('per_page', 15));
 
             return response()->json([
                 'status' => true,
