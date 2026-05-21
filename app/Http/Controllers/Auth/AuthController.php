@@ -42,6 +42,13 @@ class AuthController extends Controller
 //                'email' => ['The provided credentials are incorrect.'],
 //            ]);
         }
+        if ($user->type != 'guard' || $user->type != 'supervisor') {
+            return response()->json([
+                'status' => false,
+                'message' => 'you are not allowed to access this app.'
+            ]);
+
+        }
 
         // Create token for mobile device
         $token = $user->createToken($request->device_name)->plainTextToken;
