@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Operations;
 use App\Http\Controllers\Controller;
 use App\Models\AttendanceEmployee;
 use App\Models\Client;
+use App\Models\ClientContact;
 use App\Models\Employee;
 use App\Models\EmployeeDeployment;
 use App\Models\EmployeeDocument;
@@ -205,6 +206,14 @@ class AuthController extends Controller
                 'deployed_by'=>optional($request->user())->id,
             ]);
 
+            $clientContact=ClientContact::create([
+                'client_id' => $request->client->id,
+                'name'=>$request->name,
+                'email'=>$request->email,
+                'phone'=>$request->phone ?? null,
+                'created_by'=>optional($request->user())->id,
+            ]);
+
             return response()->json([
                 'status' => true,
                 'message' => 'Supervisor created successfully',
@@ -212,6 +221,7 @@ class AuthController extends Controller
                     'user' => $user,
                     'employee' => $employee,
                     'client_staff' => $clientStaff,
+                    'client_contact' => $clientContact,
                 ],
             ], 201);
         } catch (\Throwable $e) {
