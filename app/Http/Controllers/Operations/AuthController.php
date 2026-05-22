@@ -215,7 +215,9 @@ class AuthController extends Controller
                 'name'=>$request->name,
                 'email'=>$request->email,
                 'phone'=>$request->phone ?? null,
-                'created_by'=>optional($request->user())->id,
+                'hours'=>12,
+                'validity_period'=>30,
+                'deployed_by'=>optional($request->user())->id,
             ]);
 
             return response()->json([
