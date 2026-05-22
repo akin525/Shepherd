@@ -194,6 +194,7 @@ class AuthController extends Controller
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
+                'gender' => $request->gender ?? 'Male',
                 'staff_type' => 'supervisor',
                 'created_by' => optional($request->user())->id,
             ]);
