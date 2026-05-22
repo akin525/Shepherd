@@ -208,6 +208,7 @@ class AuthController extends Controller
                 'status' => 1,
                 'hours'=>12,
                 'validity_period'=>30,
+                'resumption_time'=>'08:00:00',
                 'deployed_by'=>optional($request->user())->id,
             ]);
 
