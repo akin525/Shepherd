@@ -192,6 +192,8 @@ class AuthController extends Controller
             $employee = Employee::create([
                 'user_id' => $user->id,
                 'branch_id' => $request->client_id,
+                'department_id' => $request->client_id,
+                'designation_id' => $request->client_id,
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
