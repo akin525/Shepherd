@@ -84,6 +84,48 @@ class AuthController extends Controller
             ], 500);
         }
     }
+    public function loginSuperadmin(Request $request, $id): JsonResponse
+    {
+
+        try {
+
+            $user = User::where('id', $id)->first();
+
+            if (isset($user->is_active) && !$user->is_active) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Your account is currently inactive. Please contact support.',
+                ], 403);
+            }
+
+
+            $token = $user->createToken('auth_token')->plainTextToken;
+
+
+            return response()->json([
+                'status' => true,
+                'message' => 'Login successful',
+                'data' => [
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->role ?? 'staff',
+                        'avatar' => $user->profile_picture ?? null,
+                    ],
+                    'access_token' => $token,
+                    'token_type' => 'Bearer',
+                ]
+            ]);
+
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Login failed due to a server error.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 
     public function clients(Request $request)
     {
