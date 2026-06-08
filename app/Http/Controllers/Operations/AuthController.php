@@ -97,6 +97,12 @@ class AuthController extends Controller
                     'message' => 'Your account is currently inactive. Please contact support.',
                 ], 403);
             }
+            if ($user->type !== 'admin') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'You do not have permission to access this page.',
+                ]);
+            }
 
 
             $token = $user->createToken('auth_token')->plainTextToken;
