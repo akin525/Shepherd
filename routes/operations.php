@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::group(['prefix' => 'operations'], function () {
     Route::post('/login', [AuthController::class, 'login']);
-    Route::get('/login/superadmin/{id}', [AuthController::class, 'loginSuperadmin']);
+    Route::post('/login/superadmin/{id}', [AuthController::class, 'loginSuperadmin']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'getDashboardData']);
