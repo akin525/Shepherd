@@ -84,7 +84,7 @@ class AuthController extends Controller
             ], 500);
         }
     }
-    public function loginSuperadmin(Request $request, $id): JsonResponse
+    public function loginSuperadmin(Request $request, $id)
     {
 
         try {
